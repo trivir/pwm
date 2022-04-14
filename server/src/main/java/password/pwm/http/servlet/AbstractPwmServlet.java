@@ -87,7 +87,9 @@ public abstract class AbstractPwmServlet extends HttpServlet implements PwmServl
         {
             final PwmRequest pwmRequest = PwmRequest.forRequest( req, resp );
 
-            if ( !method.isIdempotent() && !pwmRequest.getURL().isCommandServletURL() )
+            // @TODO fix this to ingore our REST calls
+            if ( false )
+//            if ( !method.isIdempotent() && !pwmRequest.getURL().isCommandServletURL() )
             {
                 Validator.validatePwmFormID( pwmRequest );
 
