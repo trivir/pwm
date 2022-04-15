@@ -122,7 +122,8 @@ public class NewUserServlet extends ControlledPwmServlet
         reset( HttpMethod.POST ),
         agree( HttpMethod.POST ),
         sendOTP( HttpMethod.POST),
-        verifyOTP( HttpMethod.POST);
+        verifyOTP( HttpMethod.POST),
+        spaNewUser( HttpMethod.POST ),;
 
         private final Collection<HttpMethod> method;
 
@@ -447,6 +448,74 @@ public class NewUserServlet extends ControlledPwmServlet
 
         final RestResultBean restResultBean = RestResultBean.withData( outputMap, Map.class );
         pwmRequest.outputJsonResult( restResultBean );
+        return ProcessStatus.Halt;
+    }
+
+    @ActionHandler( action = "spaNewUser" )
+    public ProcessStatus spaNewUserFormSubmitted(
+            final PwmRequest pwmRequest
+    )
+            throws IOException, ServletException, PwmUnrecoverableException, ChaiUnavailableException
+    {
+        final PwmDomain pwmDomain = pwmRequest.getPwmDomain();
+        final Locale locale = pwmRequest.getLocale();
+
+        try
+        {
+            final NewUserBean newUserBean = getNewUserBean( pwmRequest );
+            newUserBean.setProfileID( "default" ); //ToDo - Dynamic (see example in NextStep or use profile in request)
+
+            final NewUserForm newUserForm = NewUserFormUtils.readFromJsonRequest( pwmRequest, newUserBean );
+            PasswordUtility.PasswordCheckInfo passwordCheckInfo = verifyForm( pwmRequest, newUserForm, true );
+            if ( passwordCheckInfo.isPassed() && passwordCheckInfo.getMatch() == PasswordUtility.PasswordCheckInfo.MatchStatus.MATCH )
+            {
+                passwordCheckInfo = new PasswordUtility.PasswordCheckInfo(
+                        Message.getLocalizedMessage( locale,
+                                Message.Success_NewUserForm, pwmDomain.getConfig() ),
+                        passwordCheckInfo.isPassed(),
+                        passwordCheckInfo.getStrength(),
+                        passwordCheckInfo.getMatch(),
+                        passwordCheckInfo.getErrorCode()
+                );
+            }
+            final RestCheckPasswordServer.JsonOutput jsonData = RestCheckPasswordServer.JsonOutput.fromPasswordCheckInfo(
+                    passwordCheckInfo );
+
+            final RestResultBean restResultBean = RestResultBean.withData( jsonData, RestCheckPasswordServer.JsonOutput.class );
+            pwmRequest.outputJsonResult( restResultBean );
+            // Set these since the actions are handled in the spa
+            newUserBean.setFormPassed( true );
+            newUserBean.setAgreementPassed( true );
+
+            final String newUserDN = NewUserUtils.determineUserDN( pwmRequest, newUserBean.getNewUserForm() );
+            final NewUserProfile newUserProfile = getNewUserProfile( pwmRequest );
+
+            try
+            {
+                //NewUserUtils.createUser( newUserBean.getNewUserForm(), pwmRequest, newUserDN );
+                NewUserUtils.createUser( newUserForm, pwmRequest, newUserDN );
+                newUserBean.setCreateStartTime( Instant.now() );
+                forwardToWait( pwmRequest, newUserProfile );
+            }
+            catch ( final PwmOperationalException e )
+            {
+                LOGGER.error( pwmRequest, () -> "error during user creation: " + e.getMessage() );
+                if ( newUserProfile.readSettingAsBoolean( PwmSetting.NEWUSER_DELETE_ON_FAIL ) )
+                {
+                    NewUserUtils.deleteUserAccount( newUserDN, pwmRequest );
+                }
+                LOGGER.error( pwmRequest, () -> e.getErrorInformation().toDebugStr() );
+                pwmRequest.respondWithError( e.getErrorInformation() );
+            }
+
+        }
+        catch ( final PwmOperationalException e )
+        {
+            final RestResultBean restResultBean = RestResultBean.fromError( e.getErrorInformation(), pwmRequest );
+            LOGGER.debug( pwmRequest, () -> "error while validating new user form: " + e.getMessage() );
+            pwmRequest.outputJsonResult( restResultBean );
+        }
+
         return ProcessStatus.Halt;
     }
 
