@@ -26,6 +26,7 @@ import lombok.Data;
 import password.pwm.PwmConstants;
 import password.pwm.PwmDomain;
 import password.pwm.VerificationMethodSystem;
+import password.pwm.bean.EmailItemBean;
 import password.pwm.bean.TokenDestinationItem;
 import password.pwm.config.DomainConfig;
 import password.pwm.config.PwmSetting;
@@ -87,6 +88,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * User interaction servlet for creating new users (self registration).
@@ -404,16 +406,28 @@ public class NewUserServlet extends ControlledPwmServlet
 
         NewUserTokenData2 tokenData = new NewUserTokenData2();
         tokenData.emailAddress = email;
-        tokenData.otp = "123456";
+        tokenData.otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 1000000));
 
         final DomainSecureService domainSecureService = pwmRequest.getPwmDomain().getSecureService();
         final String encodedTokenData = domainSecureService.encryptObjectToString( tokenData );
+
+        final PwmSession pwmSession = pwmRequest.getPwmSession();
+        final DomainConfig config = pwmRequest.getDomainConfig();
+        final Locale locale = pwmSession.getSessionStateBean().getLocale();
+        final EmailItemBean configuredEmailSetting = config.readSettingAsEmail( PwmSetting.EMAIL_NEWUSER_VERIFICATION, locale );
+        final EmailItemBean tokenizedEmail = configuredEmailSetting.applyBodyReplacement("%TOKEN%", tokenData.otp);
+        final EmailItemBean workingItemBean = new EmailItemBean(tokenData.emailAddress, tokenizedEmail.getFrom(),
+                tokenizedEmail.getSubject(), tokenizedEmail.getBodyPlain(), tokenizedEmail.getBodyHtml());
+        pwmRequest.getPwmDomain().getPwmApplication().getEmailQueue().submitEmailImmediate(
+                workingItemBean,
+                null,
+                pwmSession.getSessionManager().getMacroMachine( )
+        );
 
         final LinkedHashMap<String, Object> outputMap = new LinkedHashMap<>();
         outputMap.put( "token", encodedTokenData );
 
         final RestResultBean restResultBean = RestResultBean.withData( outputMap, Map.class );
-//        final RestResultBean restResultBean = RestResultBean.forSuccessMessage( pwmRequest, Message.Success_Unknown );
         pwmRequest.outputJsonResult( restResultBean );
         return ProcessStatus.Halt;
     }
