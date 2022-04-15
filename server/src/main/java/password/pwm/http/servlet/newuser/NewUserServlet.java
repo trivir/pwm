@@ -20,7 +20,9 @@
 
 package password.pwm.http.servlet.newuser;
 
+import com.google.gson.annotations.SerializedName;
 import com.novell.ldapchai.exception.ChaiUnavailableException;
+import lombok.Data;
 import password.pwm.PwmConstants;
 import password.pwm.PwmDomain;
 import password.pwm.VerificationMethodSystem;
@@ -51,6 +53,7 @@ import password.pwm.http.servlet.forgottenpw.RemoteVerificationMethod;
 import password.pwm.i18n.Message;
 import password.pwm.ldap.UserInfo;
 import password.pwm.ldap.UserInfoBean;
+import password.pwm.svc.secure.DomainSecureService;
 import password.pwm.svc.token.TokenPayload;
 import password.pwm.svc.token.TokenService;
 import password.pwm.svc.token.TokenType;
@@ -71,6 +74,7 @@ import password.pwm.ws.server.rest.RestFormSigningServer;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import java.io.IOException;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -116,7 +120,9 @@ public class NewUserServlet extends ControlledPwmServlet
         enterCode( HttpMethod.POST, HttpMethod.GET ),
         enterRemoteResponse( HttpMethod.POST ),
         reset( HttpMethod.POST ),
-        agree( HttpMethod.POST ),;
+        agree( HttpMethod.POST ),
+        sendOTP( HttpMethod.POST),
+        verifyOTP( HttpMethod.POST);
 
         private final Collection<HttpMethod> method;
 
@@ -370,6 +376,78 @@ public class NewUserServlet extends ControlledPwmServlet
             }
         }
         return false;
+    }
+
+    @Data
+    static class NewUserTokenData2 implements Serializable
+    {
+
+        @SerializedName( "emailAddress" )
+        private String emailAddress;
+
+        @SerializedName( "otp" )
+        private String otp;
+    }
+
+    @ActionHandler( action = "sendOTP" )
+    public ProcessStatus restSendOTP(final PwmRequest pwmRequest) throws IOException, PwmUnrecoverableException
+    {
+        final Map<String, String> jsonBodyMap = pwmRequest.readBodyAsJsonStringMap();
+
+        String email = jsonBodyMap.get("email");
+        if (email == null) {
+            final RestResultBean restResultBean = RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_MISSING_PARAMETER ), pwmRequest );
+            pwmRequest.outputJsonResult( restResultBean );
+            return ProcessStatus.Halt;
+        }
+
+        NewUserTokenData2 tokenData = new NewUserTokenData2();
+        tokenData.emailAddress = email;
+        tokenData.otp = "123456";
+
+        final DomainSecureService domainSecureService = pwmRequest.getPwmDomain().getSecureService();
+        final String encodedTokenData = domainSecureService.encryptObjectToString( tokenData );
+
+        final LinkedHashMap<String, Object> outputMap = new LinkedHashMap<>();
+        outputMap.put( "token", encodedTokenData );
+
+        final RestResultBean restResultBean = RestResultBean.withData( outputMap, Map.class );
+//        final RestResultBean restResultBean = RestResultBean.forSuccessMessage( pwmRequest, Message.Success_Unknown );
+        pwmRequest.outputJsonResult( restResultBean );
+        return ProcessStatus.Halt;
+    }
+
+    @ActionHandler( action = "verifyOTP" )
+    public ProcessStatus restVerifyOTP(final PwmRequest pwmRequest) throws IOException, PwmUnrecoverableException
+    {
+        final Map<String, String> jsonBodyMap = pwmRequest.readBodyAsJsonStringMap();
+
+        String token = jsonBodyMap.get("token");
+        String otp = jsonBodyMap.get("otp");
+        if (token == null || otp == null) {
+            final RestResultBean restResultBean = RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_MISSING_PARAMETER ), pwmRequest );
+            pwmRequest.outputJsonResult( restResultBean );
+            return ProcessStatus.Halt;
+        }
+
+        final DomainSecureService domainSecureService = pwmRequest.getPwmDomain().getSecureService();
+
+        NewUserTokenData2 data = domainSecureService.decryptObject( token, NewUserTokenData2.class );
+
+        if (!data.otp.equals(otp)) {
+            final RestResultBean restResultBean = RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_TOKEN_INCORRECT ), pwmRequest );
+            pwmRequest.outputJsonResult( restResultBean );
+            return ProcessStatus.Halt;
+        }
+
+        final String encodedTokenData = domainSecureService.encryptObjectToString( data.emailAddress );
+
+        final LinkedHashMap<String, Object> outputMap = new LinkedHashMap<>();
+        outputMap.put( "token", encodedTokenData );
+
+        final RestResultBean restResultBean = RestResultBean.withData( outputMap, Map.class );
+        pwmRequest.outputJsonResult( restResultBean );
+        return ProcessStatus.Halt;
     }
 
     @ActionHandler( action = "validate" )
