@@ -67,6 +67,32 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>unpack</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>${project.groupId}</groupId>
+                                    <artifactId>pwm-new-enrollment-spa</artifactId>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${project.build.directory}</outputDirectory>
+                                    <includes>new-enrollment-spa/*</includes>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>3.3.0</version>
                 <executions>
@@ -127,6 +153,13 @@
                             <SCM-Git-Commit-Timestamp>${git.commit.time}</SCM-Git-Commit-Timestamp>
                             <SCM-Git-Commit-Dirty>${git.dirty}</SCM-Git-Commit-Dirty>                        </manifestEntries>
                     </archive>
+                    <webResources>
+                        <resource>
+                            <directory>${project.build.directory}/new-enrollment-spa</directory>
+                            <targetPath>public/new-enrollment</targetPath>
+                            <filtering>false</filtering>
+                        </resource>
+                    </webResources>
                 </configuration>
             </plugin>
             <plugin>
@@ -267,6 +300,12 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>pwm-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>pwm-new-enrollment-spa</artifactId>
             <version>${project.version}</version>
         </dependency>
 

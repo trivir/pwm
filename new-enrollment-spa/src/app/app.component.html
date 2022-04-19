@@ -1,0 +1,104 @@
+<div class="container">
+    <mat-card class="form-card mat-elevation-z4">
+        <mat-card-header>
+            <mat-card-title>New User</mat-card-title>
+        </mat-card-header>
+
+        <form [formGroup]="form" (ngSubmit)="onSubmitForm()">
+            <mat-card-content>
+                <div style="display: flex; flex-direction: row;">
+                    <mat-form-field style="width: 75%;">
+                        <mat-label>Email</mat-label>
+                        <input matInput type="email" placeholder="place@holder.com" formControlName="mail" [readonly]="formState !== FormState.EMAIL">
+                        <mat-error *ngIf="form.get('mail')?.errors?.['required']">Email is required</mat-error>
+                        <mat-error *ngIf="form.get('mail')?.errors?.['email']">Must be a valid email address
+                        </mat-error>
+                    </mat-form-field>
+                    <mat-icon *ngIf="formState === FormState.PROFILE" style="margin-top: 1.15rem; margin-left: 10px;"
+                        color="primary" matTooltip="Email verified" [matTooltipPosition]="'right'">
+                        verified
+                    </mat-icon>
+                </div>
+
+                <mat-form-field *ngIf="formState === FormState.OTP">
+                    <mat-label>OTP</mat-label>
+                    <input matInput placeholder="A1B312" formControlName="otp" [readonly]="formState > FormState.OTP">
+                    <mat-error *ngIf="form.get('otp')?.errors?.['required']">OTP is required</mat-error>
+                    <mat-error *ngIf="form.get('otp')?.errors?.['invalid']">OTP is invalid</mat-error>
+                </mat-form-field>
+
+                <div *ngIf="formState > FormState.OTP">
+                    <mat-form-field style="width: 65%;">
+                        <mat-label>First Name</mat-label>
+                        <input matInput placeholder="Place" formControlName="givenName">
+                        <mat-error>First name is required</mat-error>
+                    </mat-form-field>
+                    <mat-form-field style="width: 65%;">
+                        <mat-label>Last Name</mat-label>
+                        <input matInput placeholder="Holder" formControlName="sn">
+                        <mat-error>Last name is required</mat-error>
+                    </mat-form-field>
+
+                    <p style="margin: 0;">Password must contain:</p>
+                    <ul style="margin-top: 0;">
+                        <li *ngFor="let rule of PASSWORD_RULES">{{ rule }}</li>
+                    </ul>
+
+                    <mat-form-field style="width: 50%;">
+                        <mat-label>Password</mat-label>
+                        <input matInput type="password" formControlName="password1">
+                        <mat-error *ngIf="form.get('password1')?.errors?.['required']">Password is required
+                        </mat-error>
+                        <mat-error *ngIf="form.get('password1')?.errors?.['pattern']">Passwords must follow all the
+                            rules
+                            specfied
+                        </mat-error>
+                    </mat-form-field>
+
+                    <mat-form-field style="width: 50%;">
+                        <mat-label>Confirm Password</mat-label>
+                        <input matInput type="password" formControlName="password2">
+                        <mat-error *ngIf="form.get('password2')?.errors?.['required']">Password is required
+                        </mat-error>
+                        <mat-error *ngIf="form.get('password2')?.errors?.['mismatch']">Passwords do not match
+                        </mat-error>
+                    </mat-form-field>
+
+                    <div style="display: flex; flex-direction: row;">
+                        <mat-checkbox formControlName="agreement" color="primary">I agree to terms described in the
+                        </mat-checkbox>
+                        <p style="margin: 2px 0 0 4px;"><a style="cursor: pointer;" (click)="openAgreementDialog()">User
+                                Agreement Policy</a></p>
+                    </div>
+                    <mat-error style="font-size: x-small;"
+                        *ngIf="form.get('agreement')?.touched && !form.get('agreementOpened')?.valid">You must view the
+                        agreement</mat-error>
+                    <mat-error style="font-size: x-small;"
+                        *ngIf="form.get('agreement')?.touched && form.get('agreementOpened')?.valid && !form.get('agreement')?.valid">
+                        You must agree</mat-error>
+                </div>
+            </mat-card-content>
+
+            <div [ngSwitch]="formState">
+                <mat-card-actions *ngSwitchCase="FormState.EMAIL" align="end">
+                    <button mat-flat-button type="button" color="primary" (click)="onSendOtp()" [disabled]="!form.get('mail')?.valid">Send Token</button>
+                </mat-card-actions>
+
+                <mat-card-actions *ngSwitchCase="FormState.OTP" align="end">
+                    <button mat-button type="button" style="margin-right: auto; margin-left: 0;" (click)="onSendOtp()">Resend</button>
+                    <button mat-button type="button" (click)="onBack()">Back</button>
+                    <button mat-flat-button type="button" color="primary" (click)="onVerifyOtp()"
+                        [disabled]="!form.get('token')?.valid">Continue</button>
+                </mat-card-actions>
+
+                <mat-card-actions *ngSwitchCase="FormState.PROFILE" align="end">
+                    <button mat-button type="button" (click)="onBack()">Back</button>
+                    <button mat-flat-button color="primary" type="submit">Submit</button>
+                </mat-card-actions>
+            </div>
+
+            <mat-progress-bar *ngIf="form.get('token')?.pending || this.numWaiting > 0" mode="indeterminate">
+            </mat-progress-bar>
+        </form>
+    </mat-card>
+</div>

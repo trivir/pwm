@@ -57,6 +57,7 @@
         <module>data-service</module>
         <module>rest-test-service</module>
         <module>docker</module>
+        <module>new-enrollment-spa</module>
     </modules>
 
     <profiles>
