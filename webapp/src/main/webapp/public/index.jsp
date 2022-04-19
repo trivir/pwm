@@ -84,6 +84,7 @@
         <% } %>
         <% if (index_pwmRequest.getDomainConfig() != null && index_pwmRequest.getDomainConfig().readSettingAsBoolean(PwmSetting.NEWUSER_ENABLE)) { %>
         <a id="Button_NewUser" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.NewUser.servletUrl()%>'/>">
+        <a id="Button_NewUser" href="/pwm/public/new-enrollment/index.html">
             <div class="tile">
                 <div class="tile-content">
                     <div class="tile-image newuser-image"></div>
