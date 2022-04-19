@@ -123,8 +123,8 @@ public class NewUserServlet extends ControlledPwmServlet
         enterRemoteResponse( HttpMethod.POST ),
         reset( HttpMethod.POST ),
         agree( HttpMethod.POST ),
-        sendOTP( HttpMethod.POST),
-        verifyOTP( HttpMethod.POST),
+        sendOTP( HttpMethod.POST ),
+        verifyOTP( HttpMethod.POST ),
         spaNewUser( HttpMethod.POST ),;
 
         private final Collection<HttpMethod> method;
@@ -393,20 +393,21 @@ public class NewUserServlet extends ControlledPwmServlet
     }
 
     @ActionHandler( action = "sendOTP" )
-    public ProcessStatus restSendOTP(final PwmRequest pwmRequest) throws IOException, PwmUnrecoverableException
+    public ProcessStatus restSendOTP( final PwmRequest pwmRequest ) throws IOException, PwmUnrecoverableException
     {
         final Map<String, String> jsonBodyMap = pwmRequest.readBodyAsJsonStringMap();
 
-        String email = jsonBodyMap.get("email");
-        if (email == null) {
+        final String email = jsonBodyMap.get( "email" );
+        if ( email == null )
+        {
             final RestResultBean restResultBean = RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_MISSING_PARAMETER ), pwmRequest );
             pwmRequest.outputJsonResult( restResultBean );
             return ProcessStatus.Halt;
         }
 
-        NewUserTokenData2 tokenData = new NewUserTokenData2();
+        final NewUserTokenData2 tokenData = new NewUserTokenData2();
         tokenData.emailAddress = email;
-        tokenData.otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 1000000));
+        tokenData.otp = String.valueOf( ThreadLocalRandom.current().nextInt( 100000, 1000000 ) );
 
         final DomainSecureService domainSecureService = pwmRequest.getPwmDomain().getSecureService();
         final String encodedTokenData = domainSecureService.encryptObjectToString( tokenData );
@@ -415,9 +416,9 @@ public class NewUserServlet extends ControlledPwmServlet
         final DomainConfig config = pwmRequest.getDomainConfig();
         final Locale locale = pwmSession.getSessionStateBean().getLocale();
         final EmailItemBean configuredEmailSetting = config.readSettingAsEmail( PwmSetting.EMAIL_NEWUSER_VERIFICATION, locale );
-        final EmailItemBean tokenizedEmail = configuredEmailSetting.applyBodyReplacement("%TOKEN%", tokenData.otp);
-        final EmailItemBean workingItemBean = new EmailItemBean(tokenData.emailAddress, tokenizedEmail.getFrom(),
-                tokenizedEmail.getSubject(), tokenizedEmail.getBodyPlain(), tokenizedEmail.getBodyHtml());
+        final EmailItemBean tokenizedEmail = configuredEmailSetting.applyBodyReplacement( "%TOKEN%", tokenData.otp );
+        final EmailItemBean workingItemBean = new EmailItemBean( tokenData.emailAddress, tokenizedEmail.getFrom(),
+                tokenizedEmail.getSubject(), tokenizedEmail.getBodyPlain(), tokenizedEmail.getBodyHtml() );
         pwmRequest.getPwmDomain().getPwmApplication().getEmailQueue().submitEmailImmediate(
                 workingItemBean,
                 null,
@@ -433,13 +434,14 @@ public class NewUserServlet extends ControlledPwmServlet
     }
 
     @ActionHandler( action = "verifyOTP" )
-    public ProcessStatus restVerifyOTP(final PwmRequest pwmRequest) throws IOException, PwmUnrecoverableException
+    public ProcessStatus restVerifyOTP( final PwmRequest pwmRequest ) throws IOException, PwmUnrecoverableException
     {
         final Map<String, String> jsonBodyMap = pwmRequest.readBodyAsJsonStringMap();
 
-        String token = jsonBodyMap.get("token");
-        String otp = jsonBodyMap.get("otp");
-        if (token == null || otp == null) {
+        final String token = jsonBodyMap.get( "token" );
+        final String otp = jsonBodyMap.get( "otp" );
+        if ( token == null || otp == null )
+        {
             final RestResultBean restResultBean = RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_MISSING_PARAMETER ), pwmRequest );
             pwmRequest.outputJsonResult( restResultBean );
             return ProcessStatus.Halt;
@@ -447,9 +449,10 @@ public class NewUserServlet extends ControlledPwmServlet
 
         final DomainSecureService domainSecureService = pwmRequest.getPwmDomain().getSecureService();
 
-        NewUserTokenData2 data = domainSecureService.decryptObject( token, NewUserTokenData2.class );
+        final NewUserTokenData2 data = domainSecureService.decryptObject( token, NewUserTokenData2.class );
 
-        if (!data.otp.equals(otp)) {
+        if ( !data.otp.equals( otp ) )
+        {
             final RestResultBean restResultBean = RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_TOKEN_INCORRECT ), pwmRequest );
             pwmRequest.outputJsonResult( restResultBean );
             return ProcessStatus.Halt;
@@ -477,7 +480,8 @@ public class NewUserServlet extends ControlledPwmServlet
         try
         {
             final NewUserBean newUserBean = getNewUserBean( pwmRequest );
-            newUserBean.setProfileID( "default" ); //ToDo - Dynamic (see example in NextStep or use profile in request)
+            //ToDo - Dynamic (see example in NextStep or use profile in request)
+            newUserBean.setProfileID( "default" );
 
             final NewUserForm newUserForm = NewUserFormUtils.readFromJsonRequest( pwmRequest, newUserBean );
             PasswordUtility.PasswordCheckInfo passwordCheckInfo = verifyForm( pwmRequest, newUserForm, true );
