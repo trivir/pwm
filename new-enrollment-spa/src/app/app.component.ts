@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
-import { AppService, PwmResponse } from './app.service';
+import { AppService } from './app.service';
 import { MatchingValidator } from './matching-validator';
 import { UserAgreementDialogComponent } from './user-agreement-dialog/user-agreement-dialog.component';
 
@@ -56,6 +56,10 @@ export class AppComponent {
     }
 
     onSendOtp(): void {
+        if (this.form.get('mail')!.invalid) {
+            this.form.get('mail')!.markAsTouched();
+            return;
+        }
         this.form.get('otp')!.reset('');
         this.form.get('token')!.reset('');
         this.service.sendOtp({ email: this.form.get('mail')!.value }).subscribe({
@@ -72,6 +76,10 @@ export class AppComponent {
     }
 
     onVerifyOtp(): void {
+        if (this.form.get('otp')!.invalid) {
+            this.form.get('otp')!.markAsTouched();
+            return;
+        }
         this.service.verifyOtp({ otp: this.form.get('otp')!.value, token: this.form.get('token')!.value }).subscribe({
             next: response => {
                 if (response.error) {

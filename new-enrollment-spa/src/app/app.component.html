@@ -9,7 +9,7 @@
                 <div style="display: flex; flex-direction: row;">
                     <mat-form-field style="width: 75%;">
                         <mat-label>Email</mat-label>
-                        <input matInput type="email" placeholder="place@holder.com" formControlName="mail" [readonly]="formState !== FormState.EMAIL">
+                        <input matInput type="email" placeholder="place@holder.com" formControlName="mail" [readonly]="formState !== FormState.EMAIL" (keydown.enter)="$event.preventDefault(); onSendOtp()">
                         <mat-error *ngIf="form.get('mail')?.errors?.['required']">Email is required</mat-error>
                         <mat-error *ngIf="form.get('mail')?.errors?.['email']">Must be a valid email address
                         </mat-error>
@@ -22,7 +22,7 @@
 
                 <mat-form-field *ngIf="formState === FormState.OTP">
                     <mat-label>OTP</mat-label>
-                    <input matInput placeholder="A1B312" formControlName="otp" [readonly]="formState > FormState.OTP">
+                    <input matInput placeholder="A1B312" formControlName="otp" [readonly]="formState > FormState.OTP" (keydown.enter)="$event.preventDefault(); onVerifyOtp()">
                     <mat-error *ngIf="form.get('otp')?.errors?.['required']">OTP is required</mat-error>
                     <mat-error *ngIf="form.get('otp')?.errors?.['invalid']">OTP is invalid</mat-error>
                 </mat-form-field>
@@ -81,14 +81,13 @@
 
             <div [ngSwitch]="formState">
                 <mat-card-actions *ngSwitchCase="FormState.EMAIL" align="end">
-                    <button mat-flat-button type="button" color="primary" (click)="onSendOtp()" [disabled]="!form.get('mail')?.valid">Send Token</button>
+                    <button mat-flat-button type="button" color="primary" (click)="onSendOtp()">Send Token</button>
                 </mat-card-actions>
 
                 <mat-card-actions *ngSwitchCase="FormState.OTP" align="end">
                     <button mat-button type="button" style="margin-right: auto; margin-left: 0;" (click)="onSendOtp()">Resend</button>
                     <button mat-button type="button" (click)="onBack()">Back</button>
-                    <button mat-flat-button type="button" color="primary" (click)="onVerifyOtp()"
-                        [disabled]="!form.get('token')?.valid">Continue</button>
+                    <button mat-flat-button type="button" color="primary" (click)="onVerifyOtp()">Continue</button>
                 </mat-card-actions>
 
                 <mat-card-actions *ngSwitchCase="FormState.PROFILE" align="end">
