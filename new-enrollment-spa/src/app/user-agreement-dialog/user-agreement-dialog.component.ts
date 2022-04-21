@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { Component, Inject } from '@angular/core';
 
 @Component({
     selector: 'app-user-agreement-dialog',
@@ -6,6 +7,10 @@ import { Component } from '@angular/core';
 })
 export class UserAgreementDialogComponent {
 
-    constructor() { }
+    window: Window | null;
+
+    constructor(@Inject(DOCUMENT) private document: Document) {
+        this.window = this.document.defaultView;
+    }
 
 }

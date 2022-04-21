@@ -35,7 +35,8 @@ export class AppComponent {
         password1: ['', [Validators.required, Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/)]],
         password2: ['', Validators.required],
         agreementOpened: [false, Validators.requiredTrue],
-        agreement: [{ value: false, disabled: true }, Validators.requiredTrue]
+        agreement: [{ value: false, disabled: true }, Validators.requiredTrue],
+        referer: [null]
     }, {
         validators: MatchingValidator('password', 'confirmPassword')
     });
@@ -105,13 +106,18 @@ export class AppComponent {
             this.form.get('agreement')?.markAsTouched();
             return;
         }
+        const cookieName = 'referer';
+        const cookieValue = document.cookie.match('(^|;)\\s*' + cookieName + '\\s*=\\s*([^;]+)')?.pop() || null;
+        this.form.get('referer')!.setValue(cookieValue);
         this.service.createUser(this.form.value).subscribe(() => this.redirectToLogin());
         this.numWaiting++;
     }
 
     private redirectToLogin() {
         this.numWaiting--;
-        window.location.href = '/pwm/private/login';
+        const url = this.form.get('referer')?.value || 'default';
+        const redirectUrl = window.redirectTable[url];
+        window.location.href = redirectUrl;
     }
 
     openAgreementDialog(): void {
