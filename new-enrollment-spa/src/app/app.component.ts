@@ -36,7 +36,7 @@ export class AppComponent {
         password2: ['', Validators.required],
         agreementOpened: [false, Validators.requiredTrue],
         agreement: [{ value: false, disabled: true }, Validators.requiredTrue],
-        referer: [null]
+        nokiaPersonReferralURL: [null]
     }, {
         validators: MatchingValidator('password', 'confirmPassword')
     });
@@ -108,14 +108,14 @@ export class AppComponent {
         }
         const cookieName = 'referer';
         const cookieValue = document.cookie.match('(^|;)\\s*' + cookieName + '\\s*=\\s*([^;]+)')?.pop() || null;
-        this.form.get('referer')!.setValue(cookieValue);
+        this.form.get('nokiaPersonReferralURL')!.setValue(cookieValue);
         this.service.createUser(this.form.value).subscribe(() => this.redirectToLogin());
         this.numWaiting++;
     }
 
     private redirectToLogin() {
         this.numWaiting--;
-        const url = this.form.get('referer')?.value || 'default';
+        const url = this.form.get('nokiaPersonReferralURL')?.value || 'default';
         const redirectUrl = window.redirectTable[url];
         window.location.href = redirectUrl;
     }
