@@ -29,6 +29,7 @@
 <%@ page language="java" session="true" isThreadSafe="true"
          contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
+<%@ include file="WEB-INF/jsp/fragment/referer.jsp" %>
 <html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <%@ include file="WEB-INF/jsp/fragment/header.jsp" %>
 <body>

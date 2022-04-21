@@ -30,6 +30,7 @@
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
 <%@ taglib uri="pwm" prefix="pwm" %>
+<%@ include file="../WEB-INF/jsp/fragment/referer.jsp" %>
 <html lang="<pwm:value name="<%=PwmValue.localeCode%>"/>" dir="<pwm:value name="<%=PwmValue.localeDir%>"/>">
 <% final PwmRequest index_pwmRequest = JspUtility.getPwmRequest(pageContext); %>
 <%@ include file="../WEB-INF/jsp/fragment/header.jsp" %>
@@ -84,7 +85,6 @@
         <% } %>
         <% if (index_pwmRequest.getDomainConfig() != null && index_pwmRequest.getDomainConfig().readSettingAsBoolean(PwmSetting.NEWUSER_ENABLE)) { %>
         <a id="Button_NewUser" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.NewUser.servletUrl()%>'/>">
-        <a id="Button_NewUser" href="/pwm/public/new-enrollment/index.html">
             <div class="tile">
                 <div class="tile-content">
                     <div class="tile-image newuser-image"></div>

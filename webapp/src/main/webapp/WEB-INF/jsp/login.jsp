@@ -122,7 +122,7 @@
                     <pwm:if test="<%=PwmIfTest.newUserRegistrationEnabled%>">
                         <tr>
                             <td class="menubutton_key">
-                                <a class="menubutton" tabindex="0" id="new-user" href="/pwm/public/new-enrollment/index.html">
+                                <a class="menubutton" tabindex="0" id="new-user" href="<pwm:url addContext="true" url='<%=PwmServletDefinition.NewUser.servletUrl()%>'/>">
                                     <pwm:if test="<%=PwmIfTest.showIcons%>"><span class="btn-icon pwm-icon pwm-icon-file-text-o"></span></pwm:if>
                                     <pwm:display key="Title_NewUser"/>
                                 </a>
