@@ -32,7 +32,7 @@
         String referer = request.getHeader("referer");
         if (referer != null && referer.length() > 0) {
             Cookie refererCookie = new Cookie("referer", referer);
-            //    refererCookie.setMaxAge(60*60*24);
+            refererCookie.setPath("/");
             response.addCookie(refererCookie);
         }
     }
