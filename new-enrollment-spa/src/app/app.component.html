@@ -39,9 +39,9 @@
                         <mat-error>Last name is required</mat-error>
                     </mat-form-field>
 
-                    <p style="margin: 0;">Password must contain:</p>
+                    <p style="margin: 0;">{{window?.passwordRulesTitle}}</p>
                     <ul style="margin-top: 0;">
-                        <li *ngFor="let rule of PASSWORD_RULES">{{ rule }}</li>
+                        <li *ngFor="let rule of window?.passwordRules || []">{{ rule }}</li>
                     </ul>
 
                     <mat-form-field style="width: 50%;">

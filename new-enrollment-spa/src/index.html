@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>SsprEnrollment</title>
+  <title>SSPR Enrollment</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
@@ -18,6 +18,14 @@
     window.redirectTable = {
         'default': '/pwm',
         'http://172.17.2.252:8080/pwm/public/new-enrollment/org1.html': 'https://google.com'
-    }
+    };
+    window.passwordRulesTitle = 'Password must contain:'
+    window.passwordRules = [
+        'Minimum 8 characters',
+        'At least 1 uppercase letter',
+        'At least 1 lowercase letter',
+        'At least 1 number',
+        'At least 1 special character - (@$!%*?&#)'
+    ];
 </script>
 </html>

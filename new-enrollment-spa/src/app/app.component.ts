@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import {Component, Inject} from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { AppService } from './app.service';
 import { MatchingValidator } from './matching-validator';
 import { UserAgreementDialogComponent } from './user-agreement-dialog/user-agreement-dialog.component';
+import {DOCUMENT} from "@angular/common";
 
 export enum FormState {
     EMAIL,
@@ -18,13 +19,8 @@ export enum FormState {
 })
 export class AppComponent {
     readonly FormState = FormState;
-    readonly PASSWORD_RULES = [
-        'Minimum 8 characters',
-        'At least 1 uppercase letter',
-        'At least 1 lowercase letter',
-        'At least 1 number',
-        'At least 1 special character - (@$!%*?&#)'
-    ];
+
+    window: Window | null;
 
     form = this.formBuilder.group({
         mail: ['', [Validators.required, Validators.email]],
@@ -45,10 +41,13 @@ export class AppComponent {
     numWaiting = 0;
 
     constructor(
+        @Inject(DOCUMENT) private document: Document,
         private formBuilder: FormBuilder,
         private service: AppService,
         public dialog: MatDialog
-    ) { }
+    ) {
+        this.window = this.document.defaultView;
+    }
 
     onBack(): void {
         this.form.get('otp')?.reset();
