@@ -115,7 +115,10 @@ export class AppComponent {
 
     private redirectToLogin() {
         this.numWaiting--;
-        const url = this.form.get('nokiaPersonReferralURL')?.value || 'default';
+        let url = this.form.get('nokiaPersonReferralURL')?.value || 'default';
+        if (!Object.keys(window.redirectTable).includes(url)) {
+            url = 'default'
+        }
         const redirectUrl = window.redirectTable[url];
         window.location.href = redirectUrl;
     }
