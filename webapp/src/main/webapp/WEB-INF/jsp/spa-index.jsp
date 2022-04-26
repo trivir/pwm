@@ -28,6 +28,8 @@
 <%@ page import="java.nio.file.Paths" %>
 <%@ page import="java.nio.file.Path" %>
 <%@ page import="java.nio.charset.StandardCharsets" %>
+<%@ page import="password.pwm.http.JspUtility" %>
+<%@ page import="password.pwm.http.PwmRequestAttribute" %>
 
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
@@ -45,5 +47,6 @@
     } catch (IOException e) {
         throw new ServletException("Unable to load the file.", e);
     }
+    file = file.replaceAll("\\$PROFILE_ID\\$", (String) JspUtility.getAttribute(pageContext, PwmRequestAttribute.NewUser_ProfileId));
     pageContext.getOut().print(file);
 %>

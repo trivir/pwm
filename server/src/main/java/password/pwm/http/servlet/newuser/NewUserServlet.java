@@ -1037,6 +1037,14 @@ public class NewUserServlet extends ControlledPwmServlet
             pwmRequest.setAttribute( PwmRequestAttribute.NewUser_FormShowBackButton, showBack );
         }
 
-        pwmRequest.forwardToJsp( JspUrl.NEW_USER_SPA );
+        final boolean useSinglePageForm = newUserProfile.readSettingAsBoolean( PwmSetting.NEWUSER_FORM_SPA );
+        if ( useSinglePageForm ) {
+            pwmRequest.setAttribute( PwmRequestAttribute.NewUser_ProfileId, newUserProfile.getIdentifier() );
+            pwmRequest.forwardToJsp( JspUrl.NEW_USER_SPA );
+        }
+        else
+        {
+            pwmRequest.forwardToJsp( JspUrl.NEW_USER );
+        }
     }
 }

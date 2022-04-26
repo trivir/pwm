@@ -2822,6 +2822,11 @@
             <option value="checkbox">checkbox</option>
         </options>
     </setting>
+    <setting hidden="false" key="newUser.form.spa" level="1">
+        <default>
+            <value>false</value>
+        </default>
+    </setting>
     <setting hidden="false" key="newUser.writeAttributes" level="1">
         <ldapPermission actor="proxy" access="write"/>
         <default />

@@ -93,6 +93,7 @@ public enum PwmRequestAttribute
 
     NewUser_FormShowBackButton,
     NewUser_VisibleProfiles,
+    NewUser_ProfileId,
 
     CookieBeanStorage,
     CookieNonce,

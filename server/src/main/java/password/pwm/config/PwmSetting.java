@@ -857,7 +857,8 @@ public enum PwmSetting
 
     NEWUSER_PROFILE_LIST(
             "newUser.profile.list", PwmSettingSyntax.PROFILE, PwmSettingCategory.INTERNAL_DOMAIN ),
-
+    NEWUSER_FORM_SPA(
+            "newUser.form.spa", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.NEWUSER_PROFILE),
     NEWUSER_FORM(
             "newUser.form", PwmSettingSyntax.FORM, PwmSettingCategory.NEWUSER_PROFILE ),
     NEWUSER_LDAP_PROFILE(
