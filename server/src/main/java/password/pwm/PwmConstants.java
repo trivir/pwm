@@ -132,6 +132,7 @@ public abstract class PwmConstants
     public static final String PARAM_PASSWORD = "password";
     public static final String PARAM_CONTEXT = "context";
     public static final String PARAM_LDAP_PROFILE = "ldapProfile";
+    public static final String PARAM_NEW_USER_PROFILE_ID = "newUserProfileId";
 
     public static final String PARAM_SKIP_CAPTCHA = "skipCaptcha";
     public static final String PARAM_POST_LOGIN_URL = "posturl";

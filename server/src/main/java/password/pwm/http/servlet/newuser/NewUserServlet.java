@@ -22,6 +22,7 @@ package password.pwm.http.servlet.newuser;
 
 import com.google.gson.annotations.SerializedName;
 import com.novell.ldapchai.exception.ChaiUnavailableException;
+import lombok.Builder;
 import lombok.Data;
 import password.pwm.PwmConstants;
 import password.pwm.PwmDomain;
@@ -31,6 +32,7 @@ import password.pwm.bean.TokenDestinationItem;
 import password.pwm.config.DomainConfig;
 import password.pwm.config.PwmSetting;
 import password.pwm.config.profile.NewUserProfile;
+import password.pwm.config.profile.PwmPasswordPolicy;
 import password.pwm.config.value.data.FormConfiguration;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmDataValidationException;
@@ -51,6 +53,7 @@ import password.pwm.http.servlet.AbstractPwmServlet;
 import password.pwm.http.servlet.ControlledPwmServlet;
 import password.pwm.http.servlet.PwmServletDefinition;
 import password.pwm.http.servlet.forgottenpw.RemoteVerificationMethod;
+import password.pwm.http.tag.PasswordRequirementsTag;
 import password.pwm.i18n.Message;
 import password.pwm.ldap.UserInfo;
 import password.pwm.ldap.UserInfoBean;
@@ -125,7 +128,8 @@ public class NewUserServlet extends ControlledPwmServlet
         agree( HttpMethod.POST ),
         sendOTP( HttpMethod.POST ),
         verifyOTP( HttpMethod.POST ),
-        spaNewUser( HttpMethod.POST ),;
+        spaNewUser( HttpMethod.POST ),
+        formSchema( HttpMethod.GET ),;
 
         private final Collection<HttpMethod> method;
 
@@ -465,6 +469,61 @@ public class NewUserServlet extends ControlledPwmServlet
 
         final RestResultBean restResultBean = RestResultBean.withData( outputMap, Map.class );
         pwmRequest.outputJsonResult( restResultBean );
+        return ProcessStatus.Halt;
+    }
+
+    @Data
+    @Builder
+    public static class NewUserFormSchemaDto
+    {
+        List<FormConfiguration> fieldConfigs;
+        List<String> passwordRules;
+        String redirectUrl;
+    }
+
+    @ActionHandler( action = "formSchema" )
+    public ProcessStatus getNewUserFormSchema( final PwmRequest pwmRequest ) throws IOException, PwmUnrecoverableException
+    {
+        // Check that a newUserProfileId was specified
+        final String newUserProfileId = pwmRequest.readParameterAsString( PwmConstants.PARAM_NEW_USER_PROFILE_ID );
+        if ( StringUtil.isEmpty( newUserProfileId ) )
+        {
+            pwmRequest.outputJsonResult( RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_MISSING_PARAMETER, "missing newUserProfileId parameter" ) ) );
+            return ProcessStatus.Halt;
+        }
+
+        // Ensure that the specified newUserProfileId is one of the configured profiles
+        final Collection<String> profileIDs = pwmRequest.getDomainConfig().getNewUserProfiles().keySet();
+        if ( !profileIDs.contains( newUserProfileId ) )
+        {
+            pwmRequest.outputJsonResult( RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_SERVICE_NOT_AVAILABLE, "specified newUserProfileId is unknown" ) ) );
+            return ProcessStatus.Halt;
+        }
+
+        // Set the profileId for this pwmRequest's newUserBean
+        final NewUserBean newUserBean = pwmRequest.getPwmDomain().getSessionStateService().getBean( pwmRequest, NewUserBean.class );
+        newUserBean.setProfileID( newUserProfileId );
+
+        // Get form configurations
+        final List<FormConfiguration> formConfigurations = getFormDefinition( pwmRequest );
+
+        // Get redirectUrl
+        final NewUserProfile newUserProfile = getNewUserProfile( pwmRequest );
+        final String redirectUrl = newUserProfile.readSettingAsString( PwmSetting.NEWUSER_REDIRECT_URL );
+
+        // Get password requirements
+        final DomainConfig config = pwmRequest.getPwmDomain().getConfig();
+        final Locale locale = pwmRequest.getPwmSession().getSessionStateBean().getLocale();
+        final MacroRequest macroRequest = pwmRequest.getPwmSession().getSessionManager().getMacroMachine( );
+        final PwmPasswordPolicy passwordPolicy = newUserProfile.getNewUserPasswordPolicy( pwmRequest.getPwmRequestContext() );
+        final List<String> passwordRules = PasswordRequirementsTag.getPasswordRequirementsStrings( passwordPolicy, config, locale, macroRequest );
+
+        final NewUserFormSchemaDto newUserFormSchemaDto = NewUserFormSchemaDto.builder()
+                .fieldConfigs( formConfigurations )
+                .redirectUrl( redirectUrl )
+                .passwordRules( passwordRules )
+                .build();
+        pwmRequest.outputJsonResult( RestResultBean.withData( newUserFormSchemaDto, NewUserFormSchemaDto.class ) );
         return ProcessStatus.Halt;
     }
 
