@@ -2794,6 +2794,10 @@
         <flag>MacroSupport</flag>
         <default/>
     </setting>
+    <setting hidden="false" key="display.newuser.privacyAgreement" level="1">
+        <flag>MacroSupport</flag>
+        <default/>
+    </setting>
     <setting hidden="false" key="newUser.form" level="1">
         <ldapPermission actor="proxy" access="write"/>
         <flag>Form_ShowUniqueOption</flag>

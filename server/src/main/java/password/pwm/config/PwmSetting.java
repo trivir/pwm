@@ -867,6 +867,8 @@ public enum PwmSetting
             "newUser.createContext", PwmSettingSyntax.STRING, PwmSettingCategory.NEWUSER_PROFILE ),
     NEWUSER_AGREEMENT_MESSAGE(
             "display.newuser.agreement", PwmSettingSyntax.LOCALIZED_TEXT_AREA, PwmSettingCategory.NEWUSER_PROFILE ),
+    NEWUSER_PRIVACY_AGREEMENT_MESSAGE(
+            "display.newuser.privacyAgreement", PwmSettingSyntax.LOCALIZED_TEXT_AREA, PwmSettingCategory.NEWUSER_PROFILE ),
     NEWUSER_PROFILE_DISPLAY_NAME(
             "newUser.profile.displayName", PwmSettingSyntax.LOCALIZED_STRING, PwmSettingCategory.NEWUSER_PROFILE ),
     NEWUSER_PROFILE_DISPLAY_VISIBLE(

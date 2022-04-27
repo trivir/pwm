@@ -479,6 +479,8 @@ public class NewUserServlet extends ControlledPwmServlet
         List<FormConfiguration> fieldConfigs;
         List<String> passwordRules;
         String redirectUrl;
+        String userAgreement;
+        String userPrivacyAgreement;
     }
 
     @ActionHandler( action = "formSchema" )
@@ -514,14 +516,33 @@ public class NewUserServlet extends ControlledPwmServlet
         // Get password requirements
         final DomainConfig config = pwmRequest.getPwmDomain().getConfig();
         final Locale locale = pwmRequest.getPwmSession().getSessionStateBean().getLocale();
-        final MacroRequest macroRequest = pwmRequest.getPwmSession().getSessionManager().getMacroMachine( );
+        final MacroRequest macroRequest = NewUserUtils.createMacroMachineForNewUser(
+                pwmRequest.getPwmDomain(),
+                newUserProfile,
+                pwmRequest.getLabel(),
+                newUserBean.getNewUserForm(),
+                null
+        );
         final PwmPasswordPolicy passwordPolicy = newUserProfile.getNewUserPasswordPolicy( pwmRequest.getPwmRequestContext() );
         final List<String> passwordRules = PasswordRequirementsTag.getPasswordRequirementsStrings( passwordPolicy, config, locale, macroRequest );
+
+        // Get user agreement
+        final String newUserAgreementText = newUserProfile.readSettingAsLocalizedString( PwmSetting.NEWUSER_AGREEMENT_MESSAGE,
+                pwmRequest.getPwmSession().getSessionStateBean().getLocale() );
+        final String expandedAgreement = StringUtil.notEmpty( newUserAgreementText ) ? macroRequest.expandMacros( newUserAgreementText ) : "";
+
+        // Get privacy agreement
+        final String newUserPrivacyAgreementText = newUserProfile.readSettingAsLocalizedString( PwmSetting.NEWUSER_PRIVACY_AGREEMENT_MESSAGE,
+                pwmRequest.getPwmSession().getSessionStateBean().getLocale() );
+        final String expandedPrivacyAgreement = StringUtil.notEmpty( newUserPrivacyAgreementText ) ? macroRequest.expandMacros( newUserPrivacyAgreementText ) : "";
+
 
         final NewUserFormSchemaDto newUserFormSchemaDto = NewUserFormSchemaDto.builder()
                 .fieldConfigs( formConfigurations )
                 .redirectUrl( redirectUrl )
                 .passwordRules( passwordRules )
+                .userAgreement( expandedAgreement )
+                .userPrivacyAgreement( expandedPrivacyAgreement )
                 .build();
         pwmRequest.outputJsonResult( RestResultBean.withData( newUserFormSchemaDto, NewUserFormSchemaDto.class ) );
         return ProcessStatus.Halt;
