@@ -1,16 +1,15 @@
-import {Component, Inject} from '@angular/core';
+import { Component, Inject } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { AppService } from './app.service';
 import { MatchingValidator } from './matching-validator';
-import { UserAgreementDialogComponent } from './user-agreement-dialog/user-agreement-dialog.component';
-import {DOCUMENT} from "@angular/common";
+import { DOCUMENT } from "@angular/common";
+import { NotificationCenterService } from "./notification-center.service";
 
-export enum FormState {
-    EMAIL,
-    OTP,
-    PROFILE
-}
+export type FormState =
+    | 'EMAIL'
+    | 'OTP'
+    | 'PROFILE'
 
 @Component({
     selector: 'app-root',
@@ -18,8 +17,6 @@ export enum FormState {
     styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-    readonly FormState = FormState;
-
     window: Window | null;
 
     form = this.formBuilder.group({
@@ -32,18 +29,21 @@ export class AppComponent {
         password2: ['', Validators.required],
         agreementOpened: [false, Validators.requiredTrue],
         agreement: [{ value: false, disabled: true }, Validators.requiredTrue],
+        privacyPolicyOpened: [false, Validators.requiredTrue],
+        privacyPolicy: [{ value: false, disabled: true }, Validators.requiredTrue],
         nokiaPersonReferralURL: [null]
     }, {
         validators: MatchingValidator('password', 'confirmPassword')
     });
 
-    formState = FormState.EMAIL;
+    formState: FormState = 'EMAIL';
     numWaiting = 0;
 
     constructor(
         @Inject(DOCUMENT) private document: Document,
         private formBuilder: FormBuilder,
-        private service: AppService,
+        private appService: AppService,
+        private notifyService: NotificationCenterService,
         public dialog: MatDialog
     ) {
         this.window = this.document.defaultView;
@@ -52,7 +52,7 @@ export class AppComponent {
     onBack(): void {
         this.form.get('otp')?.reset();
         this.form.get('token')?.reset();
-        this.formState = FormState.EMAIL;
+        this.formState = 'EMAIL';
     }
 
     onSendOtp(): void {
@@ -62,8 +62,8 @@ export class AppComponent {
         }
         this.form.get('otp')!.reset('');
         this.form.get('token')!.reset('');
-        this.service.sendOtp({ email: this.form.get('mail')!.value }).subscribe({
-            next: response => this.otpSent(response.data.token),
+        this.appService.sendOtp({ email: this.form.get('mail')!.value }).subscribe({
+            next: response => this.otpSent(response.data!.token),
             error: error => console.error('Error sending otp ' + error)
         });
         this.numWaiting++;
@@ -72,7 +72,8 @@ export class AppComponent {
     private otpSent(token: string): void {
         this.form.get('token')!.setValue(token);
         this.numWaiting--;
-        this.formState = FormState.OTP;
+        this.formState = 'OTP';
+        this.notifyService.displayMessage("OTP code sent, please check your email")
     }
 
     onVerifyOtp(): void {
@@ -80,12 +81,12 @@ export class AppComponent {
             this.form.get('otp')!.markAsTouched();
             return;
         }
-        this.service.verifyOtp({ otp: this.form.get('otp')!.value, token: this.form.get('token')!.value }).subscribe({
+        this.appService.verifyOtp({ otp: this.form.get('otp')!.value, token: this.form.get('token')!.value }).subscribe({
             next: response => {
                 if (response.error) {
                     this.form.get('otp')!.setErrors({ invalid: true });
                 }
-                this.otpValid(response.data.token);
+                this.otpValid(response.data!.token);
             },
             error: error => console.error('Error validating otp ' + error)
         });
@@ -96,7 +97,7 @@ export class AppComponent {
         this.form.get('token')!.setValue(token);
         this.form.get('otp')!.setErrors(null);
         this.numWaiting--;
-        this.formState = FormState.PROFILE;
+        this.formState = 'PROFILE';
     }
 
     onSubmitForm() {
@@ -108,7 +109,14 @@ export class AppComponent {
         const cookieName = 'referer';
         const cookieValue = document.cookie.match('(^|;)\\s*' + cookieName + '\\s*=\\s*([^;]+)')?.pop() || null;
         this.form.get('nokiaPersonReferralURL')!.setValue(cookieValue);
-        this.service.createUser(this.form.value).subscribe(() => this.redirectToLogin());
+        this.appService.createUser(this.form.value).subscribe({
+            next: () => this.redirectToLogin(),
+            error: (e) => {
+                this.numWaiting--;
+                console.log(e);
+                this.notifyService.displayMessage('Failed to create user: ' + e.message)
+            }
+        });
         this.numWaiting++;
     }
 
@@ -122,16 +130,19 @@ export class AppComponent {
         window.location.href = redirectUrl;
     }
 
-    openAgreementDialog(): void {
+    openAgreement(): void {
         if (!this.form.get('agreementOpened')?.value) {
             this.form.get('agreementOpened')?.setValue(true);
         }
-        const dialogRef = this.dialog.open(UserAgreementDialogComponent);
         this.form.get('agreement')?.enable();
-        dialogRef.afterClosed().subscribe(result => {
-            if (result) {
-                this.form.get('agreement')?.setValue(result);
-            }
-        });
+        this.window?.open(this.window?.agreementUrl, '_blank');
+    }
+
+    openPrivacyPolicy(): void {
+        if (!this.form.get('privacyPolicyOpened')?.value) {
+            this.form.get('privacyPolicyOpened')?.setValue(true);
+        }
+        this.form.get('privacyPolicy')?.enable();
+        this.window?.open(this.window?.privacyPolicyUrl, '_blank');
     }
 }

@@ -1,5 +1,6 @@
 interface Window {
-    agreementText: string;
+    agreementUrl: string;
+    privacyPolicyUrl: string;
     redirectTable: { [key: string]: string };
     passwordRulesTitle: string;
     passwordRules: string[];

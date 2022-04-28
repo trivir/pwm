@@ -9,25 +9,25 @@
                 <div style="display: flex; flex-direction: row;">
                     <mat-form-field style="width: 75%;">
                         <mat-label>Email</mat-label>
-                        <input matInput type="email" placeholder="place@holder.com" formControlName="mail" [readonly]="formState !== FormState.EMAIL" (keydown.enter)="$event.preventDefault(); onSendOtp()">
+                        <input matInput type="email" placeholder="place@holder.com" formControlName="mail" [readonly]="formState !== 'EMAIL'" (keydown.enter)="$event.preventDefault(); onSendOtp()">
                         <mat-error *ngIf="form.get('mail')?.errors?.['required']">Email is required</mat-error>
                         <mat-error *ngIf="form.get('mail')?.errors?.['email']">Must be a valid email address
                         </mat-error>
                     </mat-form-field>
-                    <mat-icon *ngIf="formState === FormState.PROFILE" style="margin-top: 1.15rem; margin-left: 10px;"
+                    <mat-icon *ngIf="formState === 'PROFILE'" style="margin-top: 1.15rem; margin-left: 10px;"
                         color="primary" matTooltip="Email verified" [matTooltipPosition]="'right'">
                         verified
                     </mat-icon>
                 </div>
 
-                <mat-form-field *ngIf="formState === FormState.OTP">
+                <mat-form-field *ngIf="formState === 'OTP'">
                     <mat-label>OTP</mat-label>
-                    <input matInput placeholder="A1B312" formControlName="otp" [readonly]="formState > FormState.OTP" (keydown.enter)="$event.preventDefault(); onVerifyOtp()">
+                    <input matInput placeholder="A1B312" formControlName="otp" [readonly]="formState > 'OTP'" (keydown.enter)="$event.preventDefault(); onVerifyOtp()">
                     <mat-error *ngIf="form.get('otp')?.errors?.['required']">OTP is required</mat-error>
                     <mat-error *ngIf="form.get('otp')?.errors?.['invalid']">OTP is invalid</mat-error>
                 </mat-form-field>
 
-                <div *ngIf="formState > FormState.OTP">
+                <div *ngIf="formState > 'OTP'">
                     <mat-form-field style="width: 65%;">
                         <mat-label>First Name</mat-label>
                         <input matInput placeholder="Place" formControlName="givenName">
@@ -67,7 +67,7 @@
                     <div style="display: flex; flex-direction: row;">
                         <mat-checkbox formControlName="agreement" color="primary">I agree to terms described in the
                         </mat-checkbox>
-                        <p style="margin: 2px 0 0 4px;"><a style="cursor: pointer;" (click)="openAgreementDialog()">User
+                        <p style="margin: 2px 0 0 4px;"><a style="cursor: pointer;" (click)="openAgreement()">User
                                 Agreement Policy</a></p>
                     </div>
                     <mat-error style="font-size: x-small;"
@@ -76,21 +76,34 @@
                     <mat-error style="font-size: x-small;"
                         *ngIf="form.get('agreement')?.touched && form.get('agreementOpened')?.valid && !form.get('agreement')?.valid">
                         You must agree</mat-error>
+
+                    <div style="display: flex; flex-direction: row;">
+                        <mat-checkbox formControlName="privacyPolicy" color="primary">I agree to terms described in the
+                        </mat-checkbox>
+                        <p style="margin: 2px 0 0 4px;"><a style="cursor: pointer;" (click)="openPrivacyPolicy()">User
+                            Privacy Policy</a></p>
+                    </div>
+                    <mat-error style="font-size: x-small;"
+                               *ngIf="form.get('privacyPolicy')?.touched && !form.get('privacyPolicyOpened')?.valid">You must view the
+                        privacy policy</mat-error>
+                    <mat-error style="font-size: x-small;"
+                               *ngIf="form.get('privacyPolicy')?.touched && form.get('privacyPolicyOpened')?.valid && !form.get('privacyPolicy')?.valid">
+                        You must agree</mat-error>
                 </div>
             </mat-card-content>
 
             <div [ngSwitch]="formState">
-                <mat-card-actions *ngSwitchCase="FormState.EMAIL" align="end">
+                <mat-card-actions *ngSwitchCase="'EMAIL'" align="end">
                     <button mat-flat-button type="button" color="primary" (click)="onSendOtp()">Send Token</button>
                 </mat-card-actions>
 
-                <mat-card-actions *ngSwitchCase="FormState.OTP" align="end">
+                <mat-card-actions *ngSwitchCase="'OTP'" align="end">
                     <button mat-button type="button" style="margin-right: auto; margin-left: 0;" (click)="onSendOtp()">Resend</button>
                     <button mat-button type="button" (click)="onBack()">Back</button>
                     <button mat-flat-button type="button" color="primary" (click)="onVerifyOtp()">Continue</button>
                 </mat-card-actions>
 
-                <mat-card-actions *ngSwitchCase="FormState.PROFILE" align="end">
+                <mat-card-actions *ngSwitchCase="'PROFILE'" align="end">
                     <button mat-button type="button" (click)="onBack()">Back</button>
                     <button mat-flat-button color="primary" type="submit">Submit</button>
                 </mat-card-actions>
