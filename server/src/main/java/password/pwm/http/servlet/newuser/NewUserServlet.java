@@ -31,8 +31,11 @@ import password.pwm.bean.EmailItemBean;
 import password.pwm.bean.TokenDestinationItem;
 import password.pwm.config.DomainConfig;
 import password.pwm.config.PwmSetting;
+import password.pwm.config.profile.LdapProfile;
 import password.pwm.config.profile.NewUserProfile;
 import password.pwm.config.profile.PwmPasswordPolicy;
+import password.pwm.config.stored.StoredConfigKey;
+import password.pwm.config.value.StoredValue;
 import password.pwm.config.value.data.FormConfiguration;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmDataValidationException;
@@ -81,16 +84,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -481,6 +475,7 @@ public class NewUserServlet extends ControlledPwmServlet
         String redirectUrl;
         String userAgreement;
         String userPrivacyAgreement;
+        Map<String, TokenDestinationItem.Type> fieldsForValidation;
     }
 
     @ActionHandler( action = "formSchema" )
@@ -536,6 +531,9 @@ public class NewUserServlet extends ControlledPwmServlet
                 pwmRequest.getPwmSession().getSessionStateBean().getLocale() );
         final String expandedPrivacyAgreement = StringUtil.notEmpty( newUserPrivacyAgreementText ) ? macroRequest.expandMacros( newUserPrivacyAgreementText ) : "";
 
+        // Get fields that potentially need validation
+        final LdapProfile ldapProfile = newUserProfile.getLdapProfile( pwmRequest.getDomainConfig() );
+        final Map<String, TokenDestinationItem.Type> fieldsForValidation = FormUtility.identifyFormItemsNeedingPotentialTokenValidation( ldapProfile, formConfigurations );
 
         final NewUserFormSchemaDto newUserFormSchemaDto = NewUserFormSchemaDto.builder()
                 .fieldConfigs( formConfigurations )
@@ -543,6 +541,7 @@ public class NewUserServlet extends ControlledPwmServlet
                 .passwordRules( passwordRules )
                 .userAgreement( expandedAgreement )
                 .userPrivacyAgreement( expandedPrivacyAgreement )
+                .fieldsForValidation( fieldsForValidation )
                 .build();
         pwmRequest.outputJsonResult( RestResultBean.withData( newUserFormSchemaDto, NewUserFormSchemaDto.class ) );
         return ProcessStatus.Halt;
