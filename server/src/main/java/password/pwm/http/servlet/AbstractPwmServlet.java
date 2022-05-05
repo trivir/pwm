@@ -21,6 +21,7 @@
 package password.pwm.http.servlet;
 
 import com.novell.ldapchai.exception.ChaiUnavailableException;
+import password.pwm.PwmConstants;
 import password.pwm.PwmDomain;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
@@ -86,10 +87,10 @@ public abstract class AbstractPwmServlet extends HttpServlet implements PwmServl
         try
         {
             final PwmRequest pwmRequest = PwmRequest.forRequest( req, resp );
+            final boolean isNewEnrollmentSpaRestEndpoint = pwmRequest.getURL().isNewUserServletURL()
+                    && PwmConstants.NEW_ENROLLMENT_SPA_REST_ACTIONS.contains( pwmRequest.readParameterAsString( PwmConstants.PARAM_ACTION_REQUEST ) );
 
-            // @TODO fix this to ingore our REST calls
-            if ( false )
-//            if ( !method.isIdempotent() && !pwmRequest.getURL().isCommandServletURL() )
+            if ( !method.isIdempotent() && !( pwmRequest.getURL().isCommandServletURL() || isNewEnrollmentSpaRestEndpoint ) )
             {
                 Validator.validatePwmFormID( pwmRequest );
 

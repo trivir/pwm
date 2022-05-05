@@ -179,6 +179,11 @@ public class PwmURL
 
     }
 
+    public boolean isNewUserServletURL( )
+    {
+        return matches( PwmServletDefinition.NewUser );
+    }
+
     public boolean isRestService( )
     {
         return checkIfStartsWithURL( List.of( PwmConstants.URL_PREFIX_PUBLIC + "/rest/" ) );

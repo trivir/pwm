@@ -22,6 +22,10 @@
        See the README.TXT file in WEB-INF/jsp before making changes.
 --%>
 
+
+
+<%@ page import="java.util.Base64" %>
+<%@ page import="java.nio.charset.StandardCharsets" %>
 <%
     boolean isRefererSet = false;
     for (Cookie cookie : request.getCookies()) {
@@ -31,6 +35,7 @@
     if (!isRefererSet) {
         String referer = request.getHeader("referer");
         if (referer != null && referer.length() > 0) {
+            referer = Base64.getEncoder().encodeToString(referer.getBytes(StandardCharsets.UTF_8));
             Cookie refererCookie = new Cookie("referer", referer);
             refererCookie.setPath("/");
             response.addCookie(refererCookie);

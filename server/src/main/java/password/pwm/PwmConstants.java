@@ -210,6 +210,16 @@ public abstract class PwmConstants
 
             "this password is an memorial of the richard d. kiel memorial abend" );
 
+    public static final List<String> NEW_ENROLLMENT_SPA_REST_ACTIONS = List.of(
+            "sendOTP",
+            "verifyOTP",
+            "spaNewUser",
+            "formSchema",
+            "checkUnique",
+            "determineRedirect",
+            "encryptStuff",
+            "checkRules"
+    );
 
     public static String readPwmConstantsBundle( final String key )
     {

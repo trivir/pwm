@@ -86,6 +86,7 @@ public enum JspUrl
     NEW_USER_WAIT( "newuser-wait.jsp" ),
     NEW_USER_PROFILE_CHOICE( "newuser-profilechoice.jsp" ),
     NEW_USER_AGREEMENT( "newuser-agreement.jsp" ),
+    NEW_USER_DETERMINE_REDIRECT( "newuser-determine-redirect-url.jsp" ),
     GUEST_REGISTRATION( "guest-create.jsp" ),
     GUEST_UPDATE( "guest-update.jsp" ),
     GUEST_UPDATE_SEARCH( "guest-search.jsp" ),

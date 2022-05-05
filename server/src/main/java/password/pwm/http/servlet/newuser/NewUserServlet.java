@@ -34,12 +34,11 @@ import password.pwm.config.PwmSetting;
 import password.pwm.config.profile.LdapProfile;
 import password.pwm.config.profile.NewUserProfile;
 import password.pwm.config.profile.PwmPasswordPolicy;
-import password.pwm.config.stored.StoredConfigKey;
-import password.pwm.config.value.StoredValue;
 import password.pwm.config.value.data.FormConfiguration;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmDataValidationException;
 import password.pwm.error.PwmError;
+import password.pwm.error.PwmException;
 import password.pwm.error.PwmOperationalException;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.http.HttpMethod;
@@ -66,11 +65,12 @@ import password.pwm.svc.token.TokenService;
 import password.pwm.svc.token.TokenType;
 import password.pwm.svc.token.TokenUtil;
 import password.pwm.util.CaptchaUtility;
+import password.pwm.util.PasswordData;
 import password.pwm.util.form.FormUtility;
-import password.pwm.util.json.JsonFactory;
 import password.pwm.util.java.Percent;
 import password.pwm.util.java.StringUtil;
 import password.pwm.util.java.TimeDuration;
+import password.pwm.util.json.JsonFactory;
 import password.pwm.util.logging.PwmLogger;
 import password.pwm.util.macro.MacroRequest;
 import password.pwm.util.password.PasswordUtility;
@@ -84,7 +84,16 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -122,8 +131,11 @@ public class NewUserServlet extends ControlledPwmServlet
         agree( HttpMethod.POST ),
         sendOTP( HttpMethod.POST ),
         verifyOTP( HttpMethod.POST ),
-        spaNewUser( HttpMethod.POST ),
-        formSchema( HttpMethod.GET ),;
+        spaCreateNewUser( HttpMethod.POST ),
+        formSchema( HttpMethod.GET ),
+        checkUnique( HttpMethod.POST ),
+        determineRedirect( HttpMethod.POST ),
+        checkRules( HttpMethod.POST ),;
 
         private final Collection<HttpMethod> method;
 
@@ -379,6 +391,26 @@ public class NewUserServlet extends ControlledPwmServlet
         return false;
     }
 
+    private void setProfileIdOnPwmRequest( final PwmRequest pwmRequest ) throws PwmUnrecoverableException, PwmOperationalException
+    {
+        // Check that a newUserProfileId was specified
+        final String newUserProfileId = pwmRequest.readParameterAsString( PwmConstants.PARAM_NEW_USER_PROFILE_ID );
+        if ( StringUtil.isEmpty( newUserProfileId ) )
+        {
+            throw new PwmOperationalException( new ErrorInformation( PwmError.ERROR_MISSING_PARAMETER, "missing newUserProfileId parameter" ) );
+        }
+
+        // Ensure that the specified newUserProfileId is one of the configured profiles
+        final Collection<String> profileIDs = pwmRequest.getDomainConfig().getNewUserProfiles().keySet();
+        if ( !profileIDs.contains( newUserProfileId ) )
+        {
+            throw new PwmOperationalException( new ErrorInformation( PwmError.ERROR_SERVICE_NOT_AVAILABLE, "specified newUserProfileId is unknown" ) );
+        }
+
+        // Set the profileId for this pwmRequest's newUserBean
+        pwmRequest.getPwmDomain().getSessionStateService().getBean( pwmRequest, NewUserBean.class ).setProfileID( newUserProfileId );
+    }
+
     @Data
     static class NewUserTokenData2 implements Serializable
     {
@@ -475,31 +507,22 @@ public class NewUserServlet extends ControlledPwmServlet
         String redirectUrl;
         String userAgreement;
         String userPrivacyAgreement;
-        Map<String, TokenDestinationItem.Type> fieldsForValidation;
+        Map<String, TokenDestinationItem.Type> fieldsForVerification;
+        boolean promptForPassword;
     }
 
     @ActionHandler( action = "formSchema" )
-    public ProcessStatus getNewUserFormSchema( final PwmRequest pwmRequest ) throws IOException, PwmUnrecoverableException
+    public ProcessStatus restGetNewUserFormSchema ( final PwmRequest pwmRequest ) throws IOException, PwmUnrecoverableException
     {
-        // Check that a newUserProfileId was specified
-        final String newUserProfileId = pwmRequest.readParameterAsString( PwmConstants.PARAM_NEW_USER_PROFILE_ID );
-        if ( StringUtil.isEmpty( newUserProfileId ) )
+        try
         {
-            pwmRequest.outputJsonResult( RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_MISSING_PARAMETER, "missing newUserProfileId parameter" ) ) );
+            setProfileIdOnPwmRequest( pwmRequest );
+        }
+        catch ( final PwmException e )
+        {
+            pwmRequest.outputJsonResult( RestResultBean.fromError( e.getErrorInformation() ) );
             return ProcessStatus.Halt;
         }
-
-        // Ensure that the specified newUserProfileId is one of the configured profiles
-        final Collection<String> profileIDs = pwmRequest.getDomainConfig().getNewUserProfiles().keySet();
-        if ( !profileIDs.contains( newUserProfileId ) )
-        {
-            pwmRequest.outputJsonResult( RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_SERVICE_NOT_AVAILABLE, "specified newUserProfileId is unknown" ) ) );
-            return ProcessStatus.Halt;
-        }
-
-        // Set the profileId for this pwmRequest's newUserBean
-        final NewUserBean newUserBean = pwmRequest.getPwmDomain().getSessionStateService().getBean( pwmRequest, NewUserBean.class );
-        newUserBean.setProfileID( newUserProfileId );
 
         // Get form configurations
         final List<FormConfiguration> formConfigurations = getFormDefinition( pwmRequest );
@@ -509,6 +532,7 @@ public class NewUserServlet extends ControlledPwmServlet
         final String redirectUrl = newUserProfile.readSettingAsString( PwmSetting.NEWUSER_REDIRECT_URL );
 
         // Get password requirements
+        final NewUserBean newUserBean = getNewUserBean( pwmRequest );
         final DomainConfig config = pwmRequest.getPwmDomain().getConfig();
         final Locale locale = pwmRequest.getPwmSession().getSessionStateBean().getLocale();
         final MacroRequest macroRequest = NewUserUtils.createMacroMachineForNewUser(
@@ -533,7 +557,10 @@ public class NewUserServlet extends ControlledPwmServlet
 
         // Get fields that potentially need validation
         final LdapProfile ldapProfile = newUserProfile.getLdapProfile( pwmRequest.getDomainConfig() );
-        final Map<String, TokenDestinationItem.Type> fieldsForValidation = FormUtility.identifyFormItemsNeedingPotentialTokenValidation( ldapProfile, formConfigurations );
+        final Map<String, TokenDestinationItem.Type> fieldsForVerification = FormUtility.identifyFormItemsNeedingPotentialTokenValidation( ldapProfile, formConfigurations );
+
+        // Get confirm password
+        final boolean promptForPassword = newUserProfile.readSettingAsBoolean( PwmSetting.NEWUSER_PROMPT_FOR_PASSWORD );
 
         final NewUserFormSchemaDto newUserFormSchemaDto = NewUserFormSchemaDto.builder()
                 .fieldConfigs( formConfigurations )
@@ -541,78 +568,226 @@ public class NewUserServlet extends ControlledPwmServlet
                 .passwordRules( passwordRules )
                 .userAgreement( expandedAgreement )
                 .userPrivacyAgreement( expandedPrivacyAgreement )
-                .fieldsForValidation( fieldsForValidation )
+                .fieldsForVerification( fieldsForVerification )
+                .promptForPassword( promptForPassword )
                 .build();
         pwmRequest.outputJsonResult( RestResultBean.withData( newUserFormSchemaDto, NewUserFormSchemaDto.class ) );
         return ProcessStatus.Halt;
     }
 
-    @ActionHandler( action = "spaNewUser" )
-    public ProcessStatus spaNewUserFormSubmitted(
+    @ActionHandler( action = "spaCreateNewUser" )
+    public ProcessStatus restSpaCreateNewUser(
             final PwmRequest pwmRequest
     )
             throws IOException, ServletException, PwmUnrecoverableException, ChaiUnavailableException
     {
-        final PwmDomain pwmDomain = pwmRequest.getPwmDomain();
-        final Locale locale = pwmRequest.getLocale();
+        try
+        {
+            setProfileIdOnPwmRequest( pwmRequest );
+        }
+        catch ( final PwmException e )
+        {
+            pwmRequest.outputJsonResult( RestResultBean.fromError( e.getErrorInformation() ) );
+            return ProcessStatus.Halt;
+        }
+
+        final NewUserBean newUserBean = getNewUserBean( pwmRequest );
+        newUserBean.setFormPassed( false );
+        newUserBean.setNewUserForm( null );
 
         try
         {
-            final NewUserBean newUserBean = getNewUserBean( pwmRequest );
-            //ToDo - Dynamic (see example in NextStep or use profile in request)
-            newUserBean.setProfileID( "default" );
-
-            final NewUserForm newUserForm = NewUserFormUtils.readFromJsonRequest( pwmRequest, newUserBean );
-            PasswordUtility.PasswordCheckInfo passwordCheckInfo = verifyForm( pwmRequest, newUserForm, true );
-            if ( passwordCheckInfo.isPassed() && passwordCheckInfo.getMatch() == PasswordUtility.PasswordCheckInfo.MatchStatus.MATCH )
-            {
-                passwordCheckInfo = new PasswordUtility.PasswordCheckInfo(
-                        Message.getLocalizedMessage( locale,
-                                Message.Success_NewUserForm, pwmDomain.getConfig() ),
-                        passwordCheckInfo.isPassed(),
-                        passwordCheckInfo.getStrength(),
-                        passwordCheckInfo.getMatch(),
-                        passwordCheckInfo.getErrorCode()
-                );
-            }
-            final RestCheckPasswordServer.JsonOutput jsonData = RestCheckPasswordServer.JsonOutput.fromPasswordCheckInfo(
-                    passwordCheckInfo );
-
-            final RestResultBean restResultBean = RestResultBean.withData( jsonData, RestCheckPasswordServer.JsonOutput.class );
-            pwmRequest.outputJsonResult( restResultBean );
-            // Set these since the actions are handled in the spa
+            final NewUserForm newUserForm = NewUserFormUtils.readFromRequest( pwmRequest, newUserBean );
+            final PasswordUtility.PasswordCheckInfo passwordCheckInfo = verifyForm( pwmRequest, newUserForm, true );
+            NewUserUtils.passwordCheckInfoToException( passwordCheckInfo );
+            newUserBean.setNewUserForm( newUserForm );
             newUserBean.setFormPassed( true );
             newUserBean.setAgreementPassed( true );
 
-            final String newUserDN = NewUserUtils.determineUserDN( pwmRequest, newUserBean.getNewUserForm() );
-            final NewUserProfile newUserProfile = getNewUserProfile( pwmRequest );
-
-            try
-            {
-                //NewUserUtils.createUser( newUserBean.getNewUserForm(), pwmRequest, newUserDN );
-                NewUserUtils.createUser( newUserForm, pwmRequest, newUserDN );
-                newUserBean.setCreateStartTime( Instant.now() );
-                forwardToWait( pwmRequest, newUserProfile );
-            }
-            catch ( final PwmOperationalException e )
-            {
-                LOGGER.error( pwmRequest, () -> "error during user creation: " + e.getMessage() );
-                if ( newUserProfile.readSettingAsBoolean( PwmSetting.NEWUSER_DELETE_ON_FAIL ) )
-                {
-                    NewUserUtils.deleteUserAccount( newUserDN, pwmRequest );
-                }
-                LOGGER.error( pwmRequest, () -> e.getErrorInformation().toDebugStr() );
-                pwmRequest.respondWithError( e.getErrorInformation() );
-            }
-
+            // TODO Confirm token verification of all fields that need verification
         }
         catch ( final PwmOperationalException e )
         {
-            final RestResultBean restResultBean = RestResultBean.fromError( e.getErrorInformation(), pwmRequest );
-            LOGGER.debug( pwmRequest, () -> "error while validating new user form: " + e.getMessage() );
-            pwmRequest.outputJsonResult( restResultBean );
+            pwmRequest.outputJsonResult( RestResultBean.fromError( e.getErrorInformation() ) );
+            return ProcessStatus.Halt;
         }
 
+        final String newUserDN = NewUserUtils.determineUserDN( pwmRequest, newUserBean.getNewUserForm() );
+        final NewUserProfile newUserProfile = getNewUserProfile( pwmRequest );
+
+        try
+        {
+            NewUserUtils.createUser( newUserBean.getNewUserForm(), pwmRequest, newUserDN );
+            newUserBean.setCreateStartTime( Instant.now() );
+
+            final String encryptedDn = pwmRequest.getPwmDomain().getSecureService().encryptToString( newUserDN );
+            pwmRequest.outputJsonResult( RestResultBean.withData( encryptedDn, String.class ) );
+        }
+        catch ( final PwmOperationalException e )
+        {
+            LOGGER.error( pwmRequest, () -> "error during user creation: " + e.getMessage() );
+            if ( newUserProfile.readSettingAsBoolean( PwmSetting.NEWUSER_DELETE_ON_FAIL ) )
+            {
+                NewUserUtils.deleteUserAccount( newUserDN, pwmRequest );
+            }
+            LOGGER.error( pwmRequest, () -> e.getErrorInformation().toDebugStr() );
+            pwmRequest.respondWithError( e.getErrorInformation() );
+        }
+
+        return ProcessStatus.Halt;
+    }
+
+    @ActionHandler( action = "checkUnique" )
+    public ProcessStatus restCheckUniqueField( final PwmRequest pwmRequest ) throws PwmUnrecoverableException, PwmDataValidationException, IOException, ChaiUnavailableException
+    {
+        try
+        {
+            setProfileIdOnPwmRequest( pwmRequest );
+        }
+        catch ( final PwmException e )
+        {
+            pwmRequest.outputJsonResult( RestResultBean.fromError( e.getErrorInformation() ) );
+            return ProcessStatus.Halt;
+        }
+
+        // Get fields
+        final Map<String, String> jsonBodyMap = pwmRequest.readBodyAsJsonStringMap();
+
+        // Create map of NewUserProfile FormConfiguration to Field Value
+        final NewUserProfile newUserProfile = getNewUserProfile( pwmRequest );
+        final List<FormConfiguration> formDefinition = newUserProfile.readSettingAsForm( PwmSetting.NEWUSER_FORM );
+        final Map<FormConfiguration, String> formValueData = new HashMap<>();
+        for ( final Map.Entry<String, String> entry : jsonBodyMap.entrySet() )
+        {
+            final Optional<FormConfiguration> formConfiguration = formDefinition.stream()
+                    .filter( it -> it.getName().equals( entry.getKey() ) )
+                    .findFirst();
+            if ( formConfiguration.isEmpty() )
+            {
+                pwmRequest.outputJsonResult( RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_REST_PARAMETER_CONFLICT, "specified field to check is unknown" ) ) );
+                return ProcessStatus.Halt;
+            }
+            formValueData.put( formConfiguration.get(), entry.getValue() );
+        }
+
+        final PwmDomain pwmDomain = pwmRequest.getPwmDomain();
+        final Locale locale = pwmRequest.getLocale();
+        final List<FormUtility.ValidationFlag> validationFlags = new ArrayList<>();
+        validationFlags.add( FormUtility.ValidationFlag.checkReadOnlyAndHidden );
+        validationFlags.add( FormUtility.ValidationFlag.allowResultCaching );
+        try
+        {
+            FormUtility.validateFormValueUniqueness(
+                    pwmRequest.getLabel(),
+                    pwmDomain,
+                    formValueData,
+                    locale,
+                    Collections.emptyList(),
+                    validationFlags.toArray( new FormUtility.ValidationFlag[0] )
+            );
+        }
+        catch ( final PwmDataValidationException e )
+        {
+            if ( e.getErrorInformation().getError() == PwmError.ERROR_FIELD_DUPLICATE )
+            {
+                pwmRequest.outputJsonResult( RestResultBean.withData( false, Boolean.class ) );
+                return ProcessStatus.Halt;
+            }
+            throw e;
+        }
+
+        pwmRequest.outputJsonResult( RestResultBean.withData( true, Boolean.class ) );
+        return ProcessStatus.Halt;
+    }
+
+    @Data
+    @Builder
+    public static class CheckPasswordRulesDto
+    {
+        boolean passed;
+        String message;
+    }
+
+    @ActionHandler( action = "checkRules" )
+    public ProcessStatus restCheckRules( final PwmRequest pwmRequest ) throws PwmUnrecoverableException, IOException, ChaiUnavailableException
+    {
+        try
+        {
+            setProfileIdOnPwmRequest( pwmRequest );
+        }
+        catch ( final PwmException e )
+        {
+            pwmRequest.outputJsonResult( RestResultBean.fromError( e.getErrorInformation() ) );
+            return ProcessStatus.Halt;
+        }
+
+        // Get request body password
+        final Map<String, String> formData = pwmRequest.readBodyAsJsonStringMap();
+        final String passwordField = formData.get( "password1" );
+        if ( passwordField == null || StringUtil.isEmpty( passwordField ) )
+        {
+            final CheckPasswordRulesDto results = CheckPasswordRulesDto.builder()
+                .passed( false )
+                .message( "Password cannot be empty" )
+                .build();
+            pwmRequest.outputJsonResult( RestResultBean.withData( results, CheckPasswordRulesDto.class ) );
+            return ProcessStatus.Halt;
+        }
+        final PasswordData password = new PasswordData( passwordField );
+
+        final NewUserProfile newUserProfile = getNewUserProfile( pwmRequest );
+
+        final UserInfo uiBean = UserInfoBean.builder()
+                .cachedPasswordRuleAttributes( formData )
+                .passwordPolicy( newUserProfile.getNewUserPasswordPolicy( pwmRequest.getPwmRequestContext() ) )
+                .build();
+
+        final PasswordUtility.PasswordCheckInfo passwordCheckInfo =  PasswordUtility.checkEnteredPassword(
+                pwmRequest.getPwmRequestContext(),
+                null,
+                uiBean,
+                null,
+                password,
+                password
+        );
+
+        final CheckPasswordRulesDto results = CheckPasswordRulesDto.builder()
+                .passed( passwordCheckInfo.isPassed() )
+                .message( passwordCheckInfo.isPassed() ? "" : passwordCheckInfo.getMessage() )
+                .build();
+
+        pwmRequest.outputJsonResult( RestResultBean.withData( results, CheckPasswordRulesDto.class ) );
+        return ProcessStatus.Halt;
+    }
+
+    @ActionHandler( action = "determineRedirect" )
+    public ProcessStatus restDetermineRedirectUrl( final PwmRequest pwmRequest ) throws ServletException, PwmUnrecoverableException, IOException
+    {
+        try
+        {
+            setProfileIdOnPwmRequest( pwmRequest );
+        }
+        catch ( final PwmException e )
+        {
+            pwmRequest.outputJsonResult( RestResultBean.fromError( e.getErrorInformation() ) );
+            return ProcessStatus.Halt;
+        }
+
+        final Map<String, String> jsonBodyMap = pwmRequest.readBodyAsJsonStringMap();
+
+        // Get encrypted dn (edn)
+        final String edn = jsonBodyMap.get( "edn" );
+        if ( edn == null )
+        {
+            pwmRequest.outputJsonResult( RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_MISSING_PARAMETER, "edn is required" ) ) );
+            return ProcessStatus.Halt;
+        }
+
+        final DomainSecureService domainSecureService = pwmRequest.getPwmDomain().getSecureService();
+        final String userDn = domainSecureService.decryptObject( edn, String.class );
+        pwmRequest.setAttribute( PwmRequestAttribute.NewUser_CreatedUserDn, userDn );
+        pwmRequest.setAttribute( PwmRequestAttribute.NewUser_ProfileId, getNewUserProfile( pwmRequest ).getIdentifier() );
+        pwmRequest.forwardToJsp( JspUrl.NEW_USER_DETERMINE_REDIRECT );
         return ProcessStatus.Halt;
     }
 
@@ -1117,7 +1292,8 @@ public class NewUserServlet extends ControlledPwmServlet
         }
 
         final boolean useSinglePageForm = newUserProfile.readSettingAsBoolean( PwmSetting.NEWUSER_FORM_SPA );
-        if ( useSinglePageForm ) {
+        if ( useSinglePageForm )
+        {
             pwmRequest.setAttribute( PwmRequestAttribute.NewUser_ProfileId, newUserProfile.getIdentifier() );
             pwmRequest.forwardToJsp( JspUrl.NEW_USER_SPA );
         }
