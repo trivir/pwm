@@ -30,11 +30,14 @@
 <%@ page import="java.nio.charset.StandardCharsets" %>
 <%@ page import="password.pwm.http.JspUtility" %>
 <%@ page import="password.pwm.http.PwmRequestAttribute" %>
+<%@ page import="password.pwm.http.PwmRequest" %>
 
 <!DOCTYPE html>
 <%@ page language="java" session="true" isThreadSafe="true" contentType="text/html" %>
 <%@ include file="fragment/referer.jsp" %>
 <%
+    final PwmRequest pwmRequest = PwmRequest.forRequest(request,response);
+
     String filePath = "public/new-enrollment/index.html";
     Path pathToFile = Paths.get(application.getRealPath("/"), filePath);
     if (!Files.exists(pathToFile)) {
@@ -48,5 +51,7 @@
         throw new ServletException("Unable to load the file.", e);
     }
     file = file.replaceAll("\\$PROFILE_ID\\$", (String) JspUtility.getAttribute(pageContext, PwmRequestAttribute.NewUser_ProfileId));
+    file = file.replaceAll( "<script", "<script nonce=\"" + pwmRequest.getCspNonce() + "\"");
+
     pageContext.getOut().print(file);
 %>

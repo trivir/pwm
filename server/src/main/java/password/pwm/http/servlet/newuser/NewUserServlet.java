@@ -488,7 +488,7 @@ public class NewUserServlet extends ControlledPwmServlet
             return ProcessStatus.Halt;
         }
 
-        final String encodedTokenData = domainSecureService.encryptObjectToString( data.emailAddress );
+        final String encodedTokenData = domainSecureService.encryptToString( data.emailAddress );
 
         final LinkedHashMap<String, Object> outputMap = new LinkedHashMap<>();
         outputMap.put( "token", encodedTokenData );
@@ -597,14 +597,30 @@ public class NewUserServlet extends ControlledPwmServlet
 
         try
         {
-            final NewUserForm newUserForm = NewUserFormUtils.readFromRequest( pwmRequest, newUserBean );
+            final Map<String, String> jsonBodyMap = pwmRequest.readBodyAsJsonStringMap();
+            final NewUserForm newUserForm = NewUserFormUtils.readFromRequestUsingJsonMap( pwmRequest, newUserBean, jsonBodyMap );
             final PasswordUtility.PasswordCheckInfo passwordCheckInfo = verifyForm( pwmRequest, newUserForm, true );
             NewUserUtils.passwordCheckInfoToException( passwordCheckInfo );
+
+            final LdapProfile ldapProfile = getNewUserProfile( pwmRequest ).getLdapProfile( pwmRequest.getDomainConfig() );
+            final Map<String, TokenDestinationItem.Type> fieldsForVerification = FormUtility.identifyFormItemsNeedingPotentialTokenValidation( ldapProfile, getFormDefinition( pwmRequest ) );
+            for ( final String fieldName : fieldsForVerification.keySet() )
+            {
+                if ( !jsonBodyMap.containsKey( fieldName + "Token" ) )
+                {
+                    throw new PwmDataValidationException( new ErrorInformation( PwmError.ERROR_MISSING_PARAMETER ) );
+                }
+                final String encryptedValue = jsonBodyMap.get( fieldName + "Token" );
+                final String decryptedValue = pwmRequest.getPwmDomain().getSecureService().decryptStringValue( encryptedValue );
+                if ( !jsonBodyMap.get( fieldName ).equals( decryptedValue ) )
+                {
+                    throw new PwmDataValidationException( new ErrorInformation( PwmError.ERROR_TOKEN_INCORRECT) );
+                }
+            }
+
             newUserBean.setNewUserForm( newUserForm );
             newUserBean.setFormPassed( true );
             newUserBean.setAgreementPassed( true );
-
-            // TODO Confirm token verification of all fields that need verification
         }
         catch ( final PwmOperationalException e )
         {
@@ -784,7 +800,7 @@ public class NewUserServlet extends ControlledPwmServlet
         }
 
         final DomainSecureService domainSecureService = pwmRequest.getPwmDomain().getSecureService();
-        final String userDn = domainSecureService.decryptObject( edn, String.class );
+        final String userDn = domainSecureService.decryptStringValue( edn );
         pwmRequest.setAttribute( PwmRequestAttribute.NewUser_CreatedUserDn, userDn );
         pwmRequest.setAttribute( PwmRequestAttribute.NewUser_ProfileId, getNewUserProfile( pwmRequest ).getIdentifier() );
         pwmRequest.forwardToJsp( JspUrl.NEW_USER_DETERMINE_REDIRECT );

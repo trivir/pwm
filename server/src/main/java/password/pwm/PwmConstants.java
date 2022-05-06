@@ -213,7 +213,7 @@ public abstract class PwmConstants
     public static final List<String> NEW_ENROLLMENT_SPA_REST_ACTIONS = List.of(
             "sendOTP",
             "verifyOTP",
-            "spaNewUser",
+            "spaCreateNewUser",
             "formSchema",
             "checkUnique",
             "determineRedirect",

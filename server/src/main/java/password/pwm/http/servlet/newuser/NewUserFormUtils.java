@@ -80,10 +80,19 @@ class NewUserFormUtils
     )
             throws IOException, PwmUnrecoverableException, PwmDataValidationException
     {
+        final Map<String, String> jsonBodyMap = pwmRequest.readBodyAsJsonStringMap();
+        return readFromRequestUsingJsonMap( pwmRequest, newUserBean, jsonBodyMap );
+    }
 
+    static NewUserForm readFromRequestUsingJsonMap(
+            final PwmRequest pwmRequest,
+            final NewUserBean newUserBean,
+            final Map<String, String> jsonBodyMap
+    )
+            throws PwmUnrecoverableException, PwmDataValidationException
+    {
         final Locale userLocale = pwmRequest.getLocale();
         final List<FormConfiguration> newUserForm = NewUserServlet.getFormDefinition( pwmRequest );
-        final Map<String, String> jsonBodyMap = pwmRequest.readBodyAsJsonStringMap();
         final Map<FormConfiguration, String> userFormValues = FormUtility.readFormValuesFromMap( jsonBodyMap,
                 newUserForm, userLocale );
 
