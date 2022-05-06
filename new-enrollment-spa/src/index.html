@@ -5,28 +5,18 @@
   <title>SSPR Enrollment</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
   <link rel="preconnect" href="https://fonts.gstatic.com">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body class="mat-typography">
   <app-root></app-root>
+  <script>
+    window.baseUrl = '';
+    window.newUserProfileId = '';
+    window.locale = '';
+  </script>
 </body>
-<script>
-    window.agreementUrl = 'about:blank';
-    window.privacyPolicyUrl = 'about:blank';
-    window.redirectTable = {
-        'default': '/pwm',
-        'http://172.17.2.252:8080/pwm/public/new-enrollment/org1.html': 'https://google.com'
-    };
-    window.passwordRulesTitle = 'Password must contain:'
-    window.passwordRules = [
-        'Minimum 8 characters',
-        'At least 1 uppercase letter',
-        'At least 1 lowercase letter',
-        'At least 1 number',
-        'At least 1 special character - (@$!%*?&#)'
-    ];
-</script>
 </html>

@@ -1,0 +1,95 @@
+<mat-card class="mat-elevation-z0" [class.is-large-screen]="isLargeScreen | async">
+
+    <!-- User Input -->
+    <form *ngIf="formState === 'input'" (ngSubmit)="coninueToVerify()" [formGroup]="infoForm">
+      <mat-card-title>New User</mat-card-title>
+
+      <mat-card-content style="padding-top: 10px;">
+        <!-- Normal fields -->
+        <app-dynamic-form-field *ngFor="let formConfig of formConfigs" [form]="infoForm" [formConfig]="formConfig"></app-dynamic-form-field>
+
+        <!-- Password fields -->
+        <ng-container *ngIf="promptForPassword">
+          <h3 style="margin-bottom: 5px;">New Password</h3>
+          <ul style="margin-top: 0; padding-left: 25px;">
+            <li *ngFor="let rule of passwordRules">{{ rule }}</li>
+          </ul>
+          <mat-form-field>
+            <mat-label>Password</mat-label>
+            <input matInput type="password" formControlName="password1" autocomplete="new-password">
+            <mat-error>Password error</mat-error>
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Confirm Password</mat-label>
+            <input matInput type="password" formControlName="password2" autocomplete="new-password">
+          </mat-form-field>
+        </ng-container>
+
+        <!-- Agreement Fields -->
+        <ng-container *ngIf="userAgreementText !== ''">
+          <div>Read our <a href="about:blank" target="_blank" role="button" (click)="onOpenUserAgreement()">User Agreement</a></div>
+          <mat-error *ngIf="infoForm.get('userAgreementOpened')?.touched && infoForm.get('userAgreementOpened')?.errors?.['required']" style="font-size: x-small;">You must read the User Agreement</mat-error>
+
+          <mat-checkbox color="primary" formControlName="userAgreementAgreed">I agree to the User Agreement</mat-checkbox>
+          <mat-error *ngIf="infoForm.get('userAgreementAgreed')?.touched && infoForm.get('userAgreementAgreed')?.errors?.['required']" style="font-size: x-small;">You must agree to the User Agreement</mat-error>
+        </ng-container>
+
+        <ng-container *ngIf="privacyPolicyText !== ''">
+          <div [ngStyle]="{'margin-top': userAgreementText !== '' ? '1em' : '0'}">Read our <a href="about:blank" target="_blank" (click)="onOpenPrivacyPolicy()">Privacy Policy</a></div>
+          <mat-error *ngIf="infoForm.get('privacyPolicyOpened')?.touched && infoForm.get('privacyPolicyOpened')?.errors?.['required']" style="font-size: x-small;">You must read the Privacy Policy</mat-error>
+
+          <mat-checkbox color="primary" formControlName="privacyPolicyAgreed">I agree to the Privacy Policy</mat-checkbox>
+          <mat-error *ngIf="infoForm.get('privacyPolicyAgreed')?.touched && infoForm.get('privacyPolicyAgreed')?.errors?.['required']" style="font-size: x-small;">You must agree to the Privacy Policy</mat-error>
+        </ng-container>
+      </mat-card-content>
+
+      <mat-card-actions align="end" style="margin: 0;">
+        <button *ngIf="this.formConfigs.length > 0" mat-flat-button color="primary" type="submit">Continue</button>
+      </mat-card-actions>
+    </form>
+
+    <!-- Verify Email/SMS -->
+    <form *ngIf="formState === 'verify'" (ngSubmit)="onSubmit()" [formGroup]="verifyForm">
+      <mat-card-title>Verify Contact Methods</mat-card-title>
+      <mat-card-subtitle style="margin-top: 10px;">Please verify the following contact methods by inputing a code that will be sent to your email/SMS device</mat-card-subtitle>
+
+      <mat-card-content style="padding-top: 10px;">
+        <ng-container *ngFor="let field of needVerificationFields">
+
+          <div style="width: 100%; display: flex; align-items: center;">
+            <h3 style="margin-bottom: 0;">{{ verifyForm.get(field + 'Val')!.value }}{{ verifyForm.get(field + 'OtpVerified')!.value ? ' ✓' : '' }}</h3>
+            <ng-container *ngIf="!verifyForm.get(field + 'OtpVerified')!.value">
+              <span style="flex: 1 1 auto"></span>
+              <button
+                type="button"
+                mat-button color="primary"
+                [disabled]="verifyForm.get(field + 'OtpDisabled')!.value"
+                (click)="sendOtp(field)"
+              >
+                <span
+                  matTooltip="Please wait 10 seconds before requesting another code"
+                  [matTooltipDisabled]="!verifyForm.get(field + 'OtpDisabled')!.value"
+                  matTooltipPosition="above"
+                >
+                  {{ verifyForm.get(field + 'OtpSent')?.value ? 'Resend' : 'Send OTP' }}
+                </span>
+              </button>
+              <button *ngIf="verifyForm.get(field + 'OtpSent')?.value" type="button" mat-flat-button color="primary" (click)="verifyOtp(field)">Verify</button>
+            </ng-container>
+          </div>
+
+          <mat-form-field *ngIf="verifyForm.get(field + 'OtpSent')?.value && !verifyForm.get(field + 'OtpVerified')!.value">
+            <mat-label>OTP Code</mat-label>
+            <input matInput [formControlName]="field + 'Otp'">
+          </mat-form-field>
+
+        </ng-container>
+      </mat-card-content>
+
+      <mat-card-actions style="margin: 0; display: flex;">
+        <button type="button" mat-button (click)="formState = 'input'">Back</button>
+        <span style="flex: 1 1 auto"></span>
+        <button type="submit" mat-flat-button color="primary" [disabled]="verifyForm.invalid">Submit</button>
+      </mat-card-actions>
+    </form>
+</mat-card>
