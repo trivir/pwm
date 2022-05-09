@@ -6,7 +6,10 @@
 
       <mat-card-content style="padding-top: 10px;">
         <!-- Normal fields -->
-        <app-dynamic-form-field *ngFor="let formConfig of formConfigs" [form]="infoForm" [formConfig]="formConfig"></app-dynamic-form-field>
+        <ng-container *ngFor="let formConfig of formConfigs">
+          <app-dynamic-form-field [form]="infoForm" [formConfig]="formConfig"></app-dynamic-form-field>
+          <app-dynamic-form-field *ngIf="formConfig.confirmationRequired" [form]="infoForm" [formConfig]="generateConfirmFormConfig(formConfig)"></app-dynamic-form-field>
+        </ng-container>
 
         <!-- Password fields -->
         <ng-container *ngIf="promptForPassword">
@@ -17,29 +20,32 @@
           <mat-form-field>
             <mat-label>Password</mat-label>
             <input matInput type="password" formControlName="password1" autocomplete="new-password">
-            <mat-error>Password error</mat-error>
+            <mat-error *ngIf="infoForm.get('password1')!.hasError('required')">Password is required</mat-error>
+            <mat-error *ngIf="infoForm.get('password1')!.hasError('passwordRules')">{{ infoForm.get('password1')!.hasError('passwordRules') }}</mat-error>
           </mat-form-field>
           <mat-form-field>
             <mat-label>Confirm Password</mat-label>
             <input matInput type="password" formControlName="password2" autocomplete="new-password">
+            <mat-error *ngIf="infoForm.get('password2')!.hasError('required')">Must confirm password</mat-error>
+            <mat-error *ngIf="infoForm.get('password2')!.hasError('mismatch')">Passwords do not match</mat-error>
           </mat-form-field>
         </ng-container>
 
         <!-- Agreement Fields -->
         <ng-container *ngIf="userAgreementText !== ''">
-          <div>Read our <a href="about:blank" target="_blank" role="button" (click)="onOpenUserAgreement()">User Agreement</a></div>
-          <mat-error *ngIf="infoForm.get('userAgreementOpened')?.touched && infoForm.get('userAgreementOpened')?.errors?.['required']" style="font-size: x-small;">You must read the User Agreement</mat-error>
+          <div>Read our <a [href]="userAgreementText || 'about:blank'" target="_blank" role="button" (click)="onOpenUserAgreement()">User Agreement</a></div>
+          <mat-error *ngIf="infoForm.get('userAgreementOpened')?.dirty && infoForm.get('userAgreementOpened')?.hasError('required')" style="font-size: x-small;">You must read the User Agreement</mat-error>
 
           <mat-checkbox color="primary" formControlName="userAgreementAgreed">I agree to the User Agreement</mat-checkbox>
-          <mat-error *ngIf="infoForm.get('userAgreementAgreed')?.touched && infoForm.get('userAgreementAgreed')?.errors?.['required']" style="font-size: x-small;">You must agree to the User Agreement</mat-error>
+          <mat-error *ngIf="infoForm.get('userAgreementAgreed')?.dirty && infoForm.get('userAgreementAgreed')?.hasError('required')" style="font-size: x-small;">You must agree to the User Agreement</mat-error>
         </ng-container>
 
         <ng-container *ngIf="privacyPolicyText !== ''">
-          <div [ngStyle]="{'margin-top': userAgreementText !== '' ? '1em' : '0'}">Read our <a href="about:blank" target="_blank" (click)="onOpenPrivacyPolicy()">Privacy Policy</a></div>
-          <mat-error *ngIf="infoForm.get('privacyPolicyOpened')?.touched && infoForm.get('privacyPolicyOpened')?.errors?.['required']" style="font-size: x-small;">You must read the Privacy Policy</mat-error>
+          <div [ngStyle]="{'margin-top': userAgreementText !== '' ? '1em' : '0'}">Read our <a [href]="privacyPolicyText || 'about:blank'" target="_blank" (click)="onOpenPrivacyPolicy()">Privacy Policy</a></div>
+          <mat-error *ngIf="infoForm.get('privacyPolicyOpened')?.dirty && infoForm.get('privacyPolicyOpened')?.hasError('required')" style="font-size: x-small;">You must read the Privacy Policy</mat-error>
 
           <mat-checkbox color="primary" formControlName="privacyPolicyAgreed">I agree to the Privacy Policy</mat-checkbox>
-          <mat-error *ngIf="infoForm.get('privacyPolicyAgreed')?.touched && infoForm.get('privacyPolicyAgreed')?.errors?.['required']" style="font-size: x-small;">You must agree to the Privacy Policy</mat-error>
+          <mat-error *ngIf="infoForm.get('privacyPolicyAgreed')?.dirty && infoForm.get('privacyPolicyAgreed')?.hasError('required')" style="font-size: x-small;">You must agree to the Privacy Policy</mat-error>
         </ng-container>
       </mat-card-content>
 
@@ -80,7 +86,8 @@
 
           <mat-form-field *ngIf="verifyForm.get(field + 'OtpSent')?.value && !verifyForm.get(field + 'OtpVerified')!.value">
             <mat-label>OTP Code</mat-label>
-            <input matInput [formControlName]="field + 'Otp'">
+            <input matInput [formControlName]="field + 'Otp'" (keydown.enter)="$event.preventDefault(); verifyOtp(field)">
+            <mat-error *ngIf="verifyForm.get(field + 'Otp')?.hasError('incorrect')">Incorrect token</mat-error>
           </mat-form-field>
 
         </ng-container>
@@ -89,7 +96,7 @@
       <mat-card-actions style="margin: 0; display: flex;">
         <button type="button" mat-button (click)="formState = 'input'">Back</button>
         <span style="flex: 1 1 auto"></span>
-        <button type="submit" mat-flat-button color="primary" [disabled]="verifyForm.invalid">Submit</button>
+        <button type="submit" mat-flat-button color="primary" [disabled]="verifyForm.invalid || isSubmitting">Submit</button>
       </mat-card-actions>
     </form>
 </mat-card>

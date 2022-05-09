@@ -26,20 +26,28 @@ export class DynamicFormFieldComponent {
 
     const control = this.form.get(this.formConfig.name);
 
-    if (control?.errors?.['required']) {
+    if (control?.hasError('required')) {
       return this.localePipe.transform(this.formConfig.labels) + ' is required';
     }
 
-    if (control?.errors?.['pattern']) {
+    if (control?.hasError('pattern')) {
       return this.localePipe.transform(this.formConfig.regexErrors)
     }
 
-    if (control?.errors?.['minlength']) {
+    if (control?.hasError('minlength')) {
       return this.localePipe.transform(this.formConfig.labels) + ' is too short';
     }
 
-    if (control?.errors?.['maxlength']) {
+    if (control?.hasError('maxlength')) {
       return this.localePipe.transform(this.formConfig.labels) + ' is too long';
+    }
+
+    if (control?.hasError('notUnique')) {
+      return this.localePipe.transform(this.formConfig.labels) + ' is already in use, please use a different value';
+    }
+
+    if (control?.hasError('mismatch')) {
+      return 'Does not match'
     }
 
     return 'Unknown error';

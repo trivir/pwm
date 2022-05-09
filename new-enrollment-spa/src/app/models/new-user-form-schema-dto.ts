@@ -11,5 +11,6 @@ export interface NewUserFormSchemaDto {
   userAgreement: string,
   userPrivacyAgreement: string,
   promptForPassword: boolean,
-  fieldsForVerification: Record<string, VerificationMethod>
+  fieldsForVerification: Record<string, VerificationMethod>,
+  dynamicRedirect: boolean
 }

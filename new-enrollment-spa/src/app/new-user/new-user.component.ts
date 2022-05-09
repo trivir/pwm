@@ -1,12 +1,14 @@
-import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { Component, OnInit } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { map, Observable, timer } from 'rxjs';
 import { DynamicFormService } from '../dynamic-form.service';
+import { MatchingValidator } from '../matching.validator';
 import { FormConfig } from '../models/form-config';
 import { VerificationMethod } from '../models/new-user-form-schema-dto';
 import { NotificationsService } from '../notifications.service';
 import { NewUserService } from './new-user.service';
+import { PasswordRulesValidator } from './password-rules.validator';
 
 type FormState =
   | 'input'
@@ -35,17 +37,31 @@ export class NewUserComponent implements OnInit {
   needVerificationFields: string[] = [];
   fieldsToVerify: Record<string, VerificationMethod> = {};
 
+  isSubmitting = false;
   redirectUrl = '';
+  isDynamicRedirect = false;
 
   constructor(
     private service: NewUserService,
     private notifications: NotificationsService,
     private formService: DynamicFormService,
-    private breakpointObserver: BreakpointObserver
+    private breakpointObserver: BreakpointObserver,
+    private passwordRulesValidator: PasswordRulesValidator
   ) {
     this.isLargeScreen = breakpointObserver
       .observe('(min-width: 600px)')
       .pipe(map(x => x.matches));
+  }
+
+  generateConfirmFormConfig(formConfig: FormConfig): FormConfig {
+    return {
+      ...formConfig,
+      name: formConfig.name + '_confirm',
+      labels: Object.keys(formConfig.labels).reduce((result, key) => {
+        result[key] = 'Confirm ' + formConfig.labels[key];
+        return result;
+      }, {} as any)
+    }
   }
 
   ngOnInit(): void {
@@ -58,11 +74,20 @@ export class NewUserComponent implements OnInit {
         // Normal fields
         this.infoForm = this.formService.toFormGroup(x.fieldConfigs);
         this.formConfigs = x.fieldConfigs;
+        Object.keys(this.infoForm.controls)
+          .filter(key => key.endsWith('_confirm'))
+          .forEach(key => {
+            const originalkey = key.substring(0, key.length - '_confirm'.length)
+            this.infoForm.get(originalkey)!.valueChanges
+              .subscribe(_ => this.infoForm.get(key)!.reset())
+          })
 
         // Password fields
         if (x.promptForPassword) {
-          this.infoForm.addControl('password1', new FormControl('', Validators.required))
-          this.infoForm.addControl('password2', new FormControl('', Validators.required))
+          this.infoForm.addControl('password1', new FormControl('', Validators.required, this.passwordRulesValidator.validate))
+          this.infoForm.addControl('password2', new FormControl('', Validators.required, MatchingValidator('password1')))
+          this.infoForm.get('password1')!.valueChanges
+            .subscribe(_ => this.infoForm.get('password2')!.reset(''))
           this.promptForPassword = x.promptForPassword;
           this.passwordRules = x.passwordRules;
         }
@@ -84,6 +109,12 @@ export class NewUserComponent implements OnInit {
         }
 
         this.fieldsToVerify = x.fieldsForVerification;
+
+        this.isDynamicRedirect = x.dynamicRedirect;
+
+        const cookieName = 'referer';
+        const cookieValue = document.cookie.match('(^|;)\\s*' + cookieName + '\\s*=\\s*([^;]+)')?.pop() || null;
+        this.infoForm.addControl('nokiaPersonReferralURL', new FormControl(cookieValue))
       },
       error: e => this.notifications.push(e.messsage)
     })
@@ -100,8 +131,11 @@ export class NewUserComponent implements OnInit {
   }
 
   coninueToVerify(): void {
-    this.infoForm.markAllAsTouched();
     if (this.infoForm.invalid) {
+      Object.values(this.infoForm.controls).forEach(control => {
+        control.markAsDirty()
+      })
+
       return;
     }
 
@@ -176,6 +210,10 @@ export class NewUserComponent implements OnInit {
 
     this.service.verifyOtp(fieldOtp, fieldToken).subscribe({
       next: x => {
+        if (x.token === '') {
+          this.verifyForm.get(`${field}Otp`)?.setErrors({ incorrect: true })
+          return;
+        }
         this.verifyForm.get(`${field}Token`)!.setValue(x.token)
         this.verifyForm.get(`${field}OtpVerified`)!.setValue(true)
       },
@@ -191,8 +229,22 @@ export class NewUserComponent implements OnInit {
       }
     }
 
+    this.isSubmitting = true;
     this.service.createUser(userData).subscribe({
-      next: x => window.location.href = this.redirectUrl ? this.redirectUrl : window.baseUrl,
+      next: x => {
+        if (this.isDynamicRedirect) {
+          this.redirectToDynamic(x);
+          return;
+        }
+        window.location.href = this.redirectUrl ? this.redirectUrl : window.baseUrl
+      },
+      error: e => this.notifications.push(e.message)
+    })
+  }
+
+  private redirectToDynamic(encryptedDn: string): void {
+    this.service.determineRedirect(encryptedDn).subscribe({
+      next: x => window.location.href = x,
       error: e => this.notifications.push(e.message)
     })
   }

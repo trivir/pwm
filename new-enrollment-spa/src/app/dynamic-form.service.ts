@@ -1,16 +1,18 @@
 import { Injectable } from '@angular/core';
-import { FormControl, FormGroup, ValidatorFn, Validators } from '@angular/forms';
+import { AsyncValidatorFn, FormControl, FormGroup, ValidatorFn, Validators } from '@angular/forms';
+import { MatchingValidator } from './matching.validator';
 import { FormConfig } from './models/form-config';
+import { UniqueFieldValidator } from './new-user/unique-field.validator'
 
 @Injectable({
   providedIn: 'root'
 })
 export class DynamicFormService {
 
-  constructor() { }
+  constructor(private uniqueValidator: UniqueFieldValidator) { }
 
   private determineSyncValidators(formConfig: FormConfig): ValidatorFn[] {
-    const validators = [];
+    const validators: ValidatorFn[] = [];
 
     if (formConfig.required) {
       validators.push(Validators.required);
@@ -24,8 +26,18 @@ export class DynamicFormService {
     return validators;
   }
 
+  private determineAsyncValidators(formConfig: FormConfig): AsyncValidatorFn[] {
+    const asyncValidators: AsyncValidatorFn[] = [];
+
+    if (formConfig.unique) {
+      asyncValidators.push(this.uniqueValidator.validate)
+    }
+
+    return asyncValidators;
+  }
+
   private mapFormConfigToFormControl(formConfig: FormConfig): FormControl {
-    return new FormControl('', this.determineSyncValidators(formConfig))
+    return new FormControl('', this.determineSyncValidators(formConfig), this.determineAsyncValidators(formConfig))
   }
 
   toFormGroup(formConfigs: FormConfig[]): FormGroup {
@@ -36,6 +48,10 @@ export class DynamicFormService {
 
     formConfigs.forEach(formConfig => {
       group[formConfig.name] = this.mapFormConfigToFormControl(formConfig);
+      if (formConfig.confirmationRequired) {
+        const syncValidator = formConfig.required ? Validators.required : [];
+        group[formConfig.name + '_confirm'] = new FormControl('', syncValidator, MatchingValidator(formConfig.name))
+      }
     })
 
     return new FormGroup(group);

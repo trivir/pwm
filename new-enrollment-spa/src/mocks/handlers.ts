@@ -1,4 +1,5 @@
 import { rest } from 'msw';
+import { NewUserFormSchemaDto } from 'src/app/models/new-user-form-schema-dto';
 import { PwmRestResult } from 'src/app/models/pwm-rest-result';
 
 export const handlers = [
@@ -44,10 +45,28 @@ const postResponses: { [action: string]: PwmRestResult<any> } = {
     error: false,
     errorCode: 0
   },
-  'spaNewUser': {
+  'checkUnique': {
+    data: true,
+    error: false,
+    errorCode: 0,
+  },
+  'checkRules': {
+    data: {
+      passed: true,
+      message: "Not compliant with password rules"
+    },
+    error: false,
+    errorCode: 0,
+  },
+  'spaCreateNewUser': {
     error: false,
     errorCode: 0,
     data: {}
+  },
+  'determineRedirect': {
+    error: false,
+    errorCode: 0,
+    data: 'https://google.com'
   },
   'default': {
     error: true,
@@ -140,12 +159,13 @@ const getResponses: { [action: string]: PwmRestResult<any> } = {
         'Must not include part of your name or user name.'
       ],
       redirectUrl: 'https://google.com',
-      userAgreement: 'Aasdf',
-      userPrivacyAgreement: 'Asadf',
-      fieldsForValidation: {
+      userAgreement: 'about:blank',
+      userPrivacyAgreement: 'about:blank',
+      fieldsForVerification: {
         'mail': 'email'
       },
-      promptForPassword: true
+      promptForPassword: true,
+      dynamicRedirect: true
     },
     error: false,
     errorCode: 0

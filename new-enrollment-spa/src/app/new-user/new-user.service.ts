@@ -29,7 +29,6 @@ export class NewUserService {
       params = params.set('newUserProfileId', newUserProfileId);
     }
 
-    console.groupEnd()
     return this.http.get<PwmRestResult<NewUserFormSchemaDto>>(url, { params }).pipe(
       tap(x => this.checkError(x)),
       map(x => x.data!)
@@ -58,17 +57,55 @@ export class NewUserService {
     const payload = { otp, token };
 
     return this.http.post<PwmRestResult<{ token: string }>>(url, payload, { params }).pipe(
+      tap(x => {
+        if (x.error && x.errorCode === 5037) {
+          x.data = { token: '' };
+          return x
+        }
+        return this.checkError(x)
+      }),
+      map(x => x.data!)
+    )
+  }
+
+  checkUnique( fieldData: Record<string, string>): Observable<boolean> {
+    const url = `${window.baseUrl}/public/newuser`;
+    const params = new HttpParams().set('processAction', 'checkUnique');
+
+    return this.http.post<PwmRestResult<boolean>>(url, fieldData, { params }).pipe(
       tap(x => this.checkError(x)),
       map(x => x.data!)
     )
   }
 
-  createUser(userData: any): Observable<any> {
+  checkRules( fieldData: Record<string, string>): Observable<{ passed: boolean, message: string }> {
+    const url = `${window.baseUrl}/public/newuser`;
+    const params = new HttpParams().set('processAction', 'checkRules');
+
+    return this.http.post<PwmRestResult<{ passed: boolean, message: string }>>(url, fieldData, { params }).pipe(
+      tap(x => this.checkError(x)),
+      map(x => x.data!)
+    )
+  }
+
+  createUser(userData: any): Observable<string> {
     const url = `${window.baseUrl}/public/newuser`;
     const params = new HttpParams().set('processAction', 'spaCreateNewUser');
 
-    return this.http.post<PwmRestResult<any>>(url, userData, { params }).pipe(
-      tap(x => this.checkError(x))
+    return this.http.post<PwmRestResult<string>>(url, userData, { params }).pipe(
+      tap(x => this.checkError(x)),
+      map(x => x.data!)
+    )
+  }
+
+  determineRedirect(encryptedDn: string): Observable<string> {
+    const url = `${window.baseUrl}/public/newuser`;
+    const params = new HttpParams().set('processAction', 'determineRedirect');
+    const payload = { edn: encryptedDn }
+
+    return this.http.post<PwmRestResult<string>>(url, payload, { params }).pipe(
+      tap(x => this.checkError(x)),
+      map(x => x.data!)
     )
   }
 }
