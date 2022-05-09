@@ -112,10 +112,12 @@ export class NewUserComponent implements OnInit {
 
         this.isDynamicRedirect = x.dynamicRedirect;
 
-        const cookieName = 'referer';
-        const encodedCookieValue = document.cookie.match('(^|;)\\s*' + cookieName + '\\s*=\\s*([^;]+)')?.pop() || null;
-        const decodedCookieValue = atob(encodedCookieValue || '');
-        this.infoForm.addControl('nokiaPersonReferralURL', new FormControl(decodedCookieValue))
+        if (this.infoForm.get('nokiaPersonReferralURL')) {
+          const cookieName = 'referer';
+          const encodedCookieValue = document.cookie.match('(^|;)\\s*' + cookieName + '\\s*=\\s*([^;]+)')?.pop() || null;
+          const decodedCookieValue = atob(encodedCookieValue || '');
+          this.infoForm.get('nokiaPersonReferralURL')!.setValue(decodedCookieValue);
+        }
       },
       error: e => this.notifications.push(e.messsage)
     })
