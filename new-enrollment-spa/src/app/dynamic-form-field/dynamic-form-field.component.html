@@ -1,0 +1,24 @@
+<ng-container [ngSwitch]="formConfig.type">
+  <!-- Select -->
+  <mat-form-field *ngSwitchCase="'select'" [formGroup]="form">
+    <mat-label>{{ formConfig.labels | locale }}</mat-label>
+    <mat-select *ngSwitchCase="'select'" [formControlName]="formConfig.name">
+      <mat-option *ngFor="let entry of formConfig.selectOptions | keyvalue" [value]="entry.key">{{ entry.value }}</mat-option>
+    </mat-select>
+    <mat-hint *ngIf="formConfig.name.endsWith('_confirm')">{{ formConfig.description | locale }}</mat-hint>
+    <mat-error *ngIf="!isValid">{{ errorMessage }}</mat-error>
+  </mat-form-field>
+
+  <!-- Hidden -->
+  <div *ngSwitchCase="'hidden'" [formGroup]="form">
+    <input [type]="formConfig.type" [formControlName]="formConfig.name" [placeholder]="formConfig.placeholder" [readonly]="formConfig.readonly">
+  </div>
+
+  <!-- Default -->
+  <mat-form-field *ngSwitchDefault [formGroup]="form" appearance="outline" style="width: 100%">
+    <mat-label>{{ formConfig.labels | locale }}</mat-label>
+    <input *ngSwitchDefault matInput [type]="formConfig.type" [formControlName]="formConfig.name" [placeholder]="formConfig.placeholder" [readonly]="formConfig.readonly">
+    <mat-hint *ngIf="formConfig.name.endsWith('_confirm')">{{ formConfig.description | locale }}</mat-hint>
+    <mat-error *ngIf="!isValid">{{ errorMessage }}</mat-error>
+  </mat-form-field>
+</ng-container>
