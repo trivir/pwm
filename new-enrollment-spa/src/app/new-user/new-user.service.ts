@@ -20,14 +20,10 @@ export class NewUserService {
     }
   }
 
-  getNewUserFormSchema(newUserProfileId: string): Observable<NewUserFormSchemaDto> {
-    newUserProfileId = newUserProfileId.trim();
-
+  getNewUserFormSchema(): Observable<NewUserFormSchemaDto> {
     const url = `${window.baseUrl}/public/newuser`;
-    let params = new HttpParams().set('processAction', 'formSchema');
-    if (newUserProfileId) {
-      params = params.set('newUserProfileId', newUserProfileId);
-    }
+    let params = new HttpParams().set('processAction', 'formSchema')
+      .set('newUserProfileId', window.newUserProfileId);
 
     return this.http.get<PwmRestResult<NewUserFormSchemaDto>>(url, { params }).pipe(
       tap(x => this.checkError(x)),

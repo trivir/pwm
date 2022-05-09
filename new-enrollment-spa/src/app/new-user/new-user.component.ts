@@ -69,7 +69,7 @@ export class NewUserComponent implements OnInit {
       .observe('(min-width: 600px)')
       .pipe(map(x => x.matches));
 
-    this.service.getNewUserFormSchema('default').subscribe({
+    this.service.getNewUserFormSchema().subscribe({
       next: x => {
         // Normal fields
         this.infoForm = this.formService.toFormGroup(x.fieldConfigs);
