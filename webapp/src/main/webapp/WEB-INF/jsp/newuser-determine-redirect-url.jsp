@@ -25,7 +25,16 @@
 
 <%@ page import="password.pwm.util.json.JsonFactory"%>
 <%@ page import="password.pwm.http.JspUtility"%>
-<%@ page import="password.pwm.http.PwmRequestAttribute"%><%@ page import="password.pwm.ldap.search.SearchConfiguration"%><%@ page import="password.pwm.ldap.search.UserSearchEngine"%><%@ page import="password.pwm.http.PwmRequest"%><%@ page import="java.util.Collections"%><%@ page import="password.pwm.PwmDomain"%><%@ page import="password.pwm.bean.UserIdentity"%><%@ page import="com.novell.ldapchai.provider.ChaiProvider"%><%@ page import="com.novell.ldapchai.ChaiEntry"%><%@ page import="java.util.List"%><%@ page import="java.util.Map"%><%@ page import="password.pwm.ldap.LdapOperationsHelper"%><%@ page import="java.util.HashMap"%>
+<%@ page import="password.pwm.http.PwmRequestAttribute"%><%@ page import="password.pwm.ldap.search.SearchConfiguration"%>
+<%@ page import="password.pwm.ldap.search.UserSearchEngine"%><%@ page import="password.pwm.http.PwmRequest"%>
+<%@ page import="java.util.Collections"%><%@ page import="password.pwm.PwmDomain"%>
+<%@ page import="password.pwm.bean.UserIdentity"%>
+<%@ page import="com.novell.ldapchai.provider.ChaiProvider"%>
+<%@ page import="com.novell.ldapchai.ChaiEntry"%>
+<%@ page import="java.util.List"%>
+<%@ page import="java.util.Map"%>
+<%@ page import="password.pwm.ldap.LdapOperationsHelper"%>
+<%@ page import="java.util.HashMap"%><%@ page import="password.pwm.ws.server.RestResultBean"%>
 <%@ page contentType="application/json; charset=UTF-8" pageEncoding="UTF-8"%>
 
 <%
@@ -46,7 +55,8 @@ final Map<String, String> redirectTable = Map.of("brian@holderness.net", "https:
 final String redirectUrl = redirectTable.getOrDefault( attributes.get( "mail" ).get(0), pageContext.getServletContext().getContextPath() );
 
 // Ensure the output is in JSON format
-final String output = JsonFactory.get().serialize(redirectUrl);
+final RestResultBean<String> outputData = RestResultBean.withData(redirectUrl, String.class);
+final String output = JsonFactory.get().serialize(outputData);
 %>
 
 <%= output%>

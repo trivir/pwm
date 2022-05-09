@@ -26,24 +26,32 @@ import password.pwm.bean.LocalSessionStateBean;
 import password.pwm.bean.LoginInfoBean;
 import password.pwm.config.PwmSetting;
 import password.pwm.config.profile.ChangePasswordProfile;
+import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
+import password.pwm.error.PwmException;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.http.HttpContentType;
 import password.pwm.http.HttpHeader;
 import password.pwm.http.HttpMethod;
+import password.pwm.http.JspUrl;
 import password.pwm.http.ProcessStatus;
 import password.pwm.http.PwmRequest;
+import password.pwm.http.PwmRequestAttribute;
 import password.pwm.http.PwmSession;
 import password.pwm.http.filter.AuthenticationFilter;
 import password.pwm.http.servlet.ControlledPwmServlet;
 import password.pwm.http.servlet.PwmServletDefinition;
+import password.pwm.http.servlet.newuser.NewUserServlet;
+import password.pwm.svc.secure.DomainSecureService;
 import password.pwm.util.logging.PwmLogger;
+import password.pwm.ws.server.RestResultBean;
 
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 
 public abstract class CommandServlet extends ControlledPwmServlet
 {
@@ -60,6 +68,7 @@ public abstract class CommandServlet extends ControlledPwmServlet
     {
         idleUpdate,
         checkResponses,
+        determineRedirect,
 
         //deprecated
         checkIfResponseConfigNeeded,
@@ -274,6 +283,37 @@ public abstract class CommandServlet extends ControlledPwmServlet
         {
             redirectToForwardURL( pwmRequest );
         }
+        return ProcessStatus.Halt;
+    }
+
+    @ActionHandler( action = "determineRedirect" )
+    public ProcessStatus restDetermineRedirectUrl( final PwmRequest pwmRequest ) throws ServletException, PwmUnrecoverableException, IOException
+    {
+        try
+        {
+            NewUserServlet.setProfileIdOnPwmRequest( pwmRequest );
+        }
+        catch ( final PwmException e )
+        {
+            pwmRequest.outputJsonResult( RestResultBean.fromError( e.getErrorInformation() ) );
+            return ProcessStatus.Halt;
+        }
+
+        final Map<String, String> jsonBodyMap = pwmRequest.readBodyAsJsonStringMap();
+
+        // Get encrypted dn (edn)
+        final String edn = jsonBodyMap.get( "edn" );
+        if ( edn == null )
+        {
+            pwmRequest.outputJsonResult( RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_MISSING_PARAMETER, "edn is required" ) ) );
+            return ProcessStatus.Halt;
+        }
+
+        final DomainSecureService domainSecureService = pwmRequest.getPwmDomain().getSecureService();
+        final String userDn = domainSecureService.decryptStringValue( edn );
+        pwmRequest.setAttribute( PwmRequestAttribute.NewUser_CreatedUserDn, userDn );
+        pwmRequest.setAttribute( PwmRequestAttribute.NewUser_ProfileId, NewUserServlet.getNewUserProfile( pwmRequest ).getIdentifier() );
+        pwmRequest.forwardToJsp( JspUrl.NEW_USER_DETERMINE_REDIRECT );
         return ProcessStatus.Halt;
     }
 

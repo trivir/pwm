@@ -113,8 +113,9 @@ export class NewUserComponent implements OnInit {
         this.isDynamicRedirect = x.dynamicRedirect;
 
         const cookieName = 'referer';
-        const cookieValue = document.cookie.match('(^|;)\\s*' + cookieName + '\\s*=\\s*([^;]+)')?.pop() || null;
-        this.infoForm.addControl('nokiaPersonReferralURL', new FormControl(cookieValue))
+        const encodedCookieValue = document.cookie.match('(^|;)\\s*' + cookieName + '\\s*=\\s*([^;]+)')?.pop() || null;
+        const decodedCookieValue = atob(encodedCookieValue || '');
+        this.infoForm.addControl('nokiaPersonReferralURL', new FormControl(decodedCookieValue))
       },
       error: e => this.notifications.push(e.messsage)
     })
@@ -244,7 +245,7 @@ export class NewUserComponent implements OnInit {
 
   private redirectToDynamic(encryptedDn: string): void {
     this.service.determineRedirect(encryptedDn).subscribe({
-      next: x => window.location.href = x,
+      next: x => window.location.href = x || window.baseUrl,
       error: e => this.notifications.push(e.message)
     })
   }

@@ -2893,6 +2893,11 @@
             <value/>
         </default>
     </setting>
+    <setting hidden="false" key="newUser.dynamicRedirect" level="1">
+        <default>
+            <value>false</value>
+        </default>
+    </setting>
     <setting hidden="false" key="newUser.promptForPassword" level="1">
         <default>
             <value>true</value>

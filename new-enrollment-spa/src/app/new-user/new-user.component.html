@@ -21,7 +21,7 @@
             <mat-label>Password</mat-label>
             <input matInput type="password" formControlName="password1" autocomplete="new-password">
             <mat-error *ngIf="infoForm.get('password1')!.hasError('required')">Password is required</mat-error>
-            <mat-error *ngIf="infoForm.get('password1')!.hasError('passwordRules')">{{ infoForm.get('password1')!.hasError('passwordRules') }}</mat-error>
+            <mat-error *ngIf="infoForm.get('password1')!.hasError('passwordRules')">{{ infoForm.get('password1')!.errors?.['passwordRules'] }}</mat-error>
           </mat-form-field>
           <mat-form-field>
             <mat-label>Confirm Password</mat-label>

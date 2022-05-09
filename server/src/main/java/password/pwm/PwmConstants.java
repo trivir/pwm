@@ -216,7 +216,6 @@ public abstract class PwmConstants
             "spaCreateNewUser",
             "formSchema",
             "checkUnique",
-            "determineRedirect",
             "encryptStuff",
             "checkRules"
     );

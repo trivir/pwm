@@ -42,7 +42,7 @@
               <outputDirectory>${project.build.outputDirectory}/new-enrollment-spa</outputDirectory>
               <resources>
                 <resource>
-                  <directory>dist/pwm-new-enrollment-spa</directory>
+                  <directory>dist/pwm-frontend</directory>
                 </resource>
               </resources>
             </configuration>

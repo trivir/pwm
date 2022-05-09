@@ -1,5 +1,4 @@
 import { rest } from 'msw';
-import { NewUserFormSchemaDto } from 'src/app/models/new-user-form-schema-dto';
 import { PwmRestResult } from 'src/app/models/pwm-rest-result';
 
 export const handlers = [

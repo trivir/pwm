@@ -893,6 +893,8 @@ public enum PwmSetting
             "newUser.minimumWaitTime", PwmSettingSyntax.DURATION, PwmSettingCategory.NEWUSER_PROFILE ),
     NEWUSER_REDIRECT_URL(
             "newUser.redirectUrl", PwmSettingSyntax.STRING, PwmSettingCategory.NEWUSER_PROFILE ),
+    NEWUSER_DYNAMIC_REDIRECT(
+            "newUser.dynamicRedirect", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.NEWUSER_PROFILE ),
     NEWUSER_PROMPT_FOR_PASSWORD(
             "newUser.promptForPassword", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.NEWUSER_PROFILE ),
     NEWUSER_TOKEN_LIFETIME_EMAIL(

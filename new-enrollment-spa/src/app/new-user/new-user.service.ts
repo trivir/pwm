@@ -70,7 +70,9 @@ export class NewUserService {
 
   checkUnique( fieldData: Record<string, string>): Observable<boolean> {
     const url = `${window.baseUrl}/public/newuser`;
-    const params = new HttpParams().set('processAction', 'checkUnique');
+    const params = new HttpParams().set('processAction', 'checkUnique')
+      .set('newUserProfileId', window.newUserProfileId);
+
 
     return this.http.post<PwmRestResult<boolean>>(url, fieldData, { params }).pipe(
       tap(x => this.checkError(x)),
@@ -80,7 +82,8 @@ export class NewUserService {
 
   checkRules( fieldData: Record<string, string>): Observable<{ passed: boolean, message: string }> {
     const url = `${window.baseUrl}/public/newuser`;
-    const params = new HttpParams().set('processAction', 'checkRules');
+    const params = new HttpParams().set('processAction', 'checkRules')
+      .set('newUserProfileId', window.newUserProfileId);
 
     return this.http.post<PwmRestResult<{ passed: boolean, message: string }>>(url, fieldData, { params }).pipe(
       tap(x => this.checkError(x)),
@@ -90,7 +93,8 @@ export class NewUserService {
 
   createUser(userData: any): Observable<string> {
     const url = `${window.baseUrl}/public/newuser`;
-    const params = new HttpParams().set('processAction', 'spaCreateNewUser');
+    const params = new HttpParams().set('processAction', 'spaCreateNewUser')
+      .set('newUserProfileId', window.newUserProfileId);
 
     return this.http.post<PwmRestResult<string>>(url, userData, { params }).pipe(
       tap(x => this.checkError(x)),
@@ -99,8 +103,9 @@ export class NewUserService {
   }
 
   determineRedirect(encryptedDn: string): Observable<string> {
-    const url = `${window.baseUrl}/public/newuser`;
-    const params = new HttpParams().set('processAction', 'determineRedirect');
+    const url = `${window.baseUrl}/public/command`;
+    const params = new HttpParams().set('processAction', 'determineRedirect')
+      .set('newUserProfileId', window.newUserProfileId);
     const payload = { edn: encryptedDn }
 
     return this.http.post<PwmRestResult<string>>(url, payload, { params }).pipe(

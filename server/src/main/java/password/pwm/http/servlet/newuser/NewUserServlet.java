@@ -134,7 +134,6 @@ public class NewUserServlet extends ControlledPwmServlet
         spaCreateNewUser( HttpMethod.POST ),
         formSchema( HttpMethod.GET ),
         checkUnique( HttpMethod.POST ),
-        determineRedirect( HttpMethod.POST ),
         checkRules( HttpMethod.POST ),;
 
         private final Collection<HttpMethod> method;
@@ -391,7 +390,7 @@ public class NewUserServlet extends ControlledPwmServlet
         return false;
     }
 
-    private void setProfileIdOnPwmRequest( final PwmRequest pwmRequest ) throws PwmUnrecoverableException, PwmOperationalException
+    public static void setProfileIdOnPwmRequest( final PwmRequest pwmRequest ) throws PwmUnrecoverableException, PwmOperationalException
     {
         // Check that a newUserProfileId was specified
         final String newUserProfileId = pwmRequest.readParameterAsString( PwmConstants.PARAM_NEW_USER_PROFILE_ID );
@@ -509,6 +508,7 @@ public class NewUserServlet extends ControlledPwmServlet
         String userPrivacyAgreement;
         Map<String, TokenDestinationItem.Type> fieldsForVerification;
         boolean promptForPassword;
+        boolean dynamicRedirect;
     }
 
     @ActionHandler( action = "formSchema" )
@@ -562,6 +562,8 @@ public class NewUserServlet extends ControlledPwmServlet
         // Get confirm password
         final boolean promptForPassword = newUserProfile.readSettingAsBoolean( PwmSetting.NEWUSER_PROMPT_FOR_PASSWORD );
 
+        final boolean dynamicRedirect = newUserProfile.readSettingAsBoolean( PwmSetting.NEWUSER_DYNAMIC_REDIRECT );
+
         final NewUserFormSchemaDto newUserFormSchemaDto = NewUserFormSchemaDto.builder()
                 .fieldConfigs( formConfigurations )
                 .redirectUrl( redirectUrl )
@@ -570,6 +572,7 @@ public class NewUserServlet extends ControlledPwmServlet
                 .userPrivacyAgreement( expandedPrivacyAgreement )
                 .fieldsForVerification( fieldsForVerification )
                 .promptForPassword( promptForPassword )
+                .dynamicRedirect( dynamicRedirect )
                 .build();
         pwmRequest.outputJsonResult( RestResultBean.withData( newUserFormSchemaDto, NewUserFormSchemaDto.class ) );
         return ProcessStatus.Halt;
@@ -603,7 +606,10 @@ public class NewUserServlet extends ControlledPwmServlet
             NewUserUtils.passwordCheckInfoToException( passwordCheckInfo );
 
             final LdapProfile ldapProfile = getNewUserProfile( pwmRequest ).getLdapProfile( pwmRequest.getDomainConfig() );
-            final Map<String, TokenDestinationItem.Type> fieldsForVerification = FormUtility.identifyFormItemsNeedingPotentialTokenValidation( ldapProfile, getFormDefinition( pwmRequest ) );
+            final Map<String, TokenDestinationItem.Type> fieldsForVerification = FormUtility.identifyFormItemsNeedingPotentialTokenValidation(
+                    ldapProfile,
+                    getFormDefinition( pwmRequest )
+            );
             for ( final String fieldName : fieldsForVerification.keySet() )
             {
                 if ( !jsonBodyMap.containsKey( fieldName + "Token" ) )
@@ -614,7 +620,7 @@ public class NewUserServlet extends ControlledPwmServlet
                 final String decryptedValue = pwmRequest.getPwmDomain().getSecureService().decryptStringValue( encryptedValue );
                 if ( !jsonBodyMap.get( fieldName ).equals( decryptedValue ) )
                 {
-                    throw new PwmDataValidationException( new ErrorInformation( PwmError.ERROR_TOKEN_INCORRECT) );
+                    throw new PwmDataValidationException( new ErrorInformation( PwmError.ERROR_TOKEN_INCORRECT ) );
                 }
             }
 
@@ -773,37 +779,6 @@ public class NewUserServlet extends ControlledPwmServlet
                 .build();
 
         pwmRequest.outputJsonResult( RestResultBean.withData( results, CheckPasswordRulesDto.class ) );
-        return ProcessStatus.Halt;
-    }
-
-    @ActionHandler( action = "determineRedirect" )
-    public ProcessStatus restDetermineRedirectUrl( final PwmRequest pwmRequest ) throws ServletException, PwmUnrecoverableException, IOException
-    {
-        try
-        {
-            setProfileIdOnPwmRequest( pwmRequest );
-        }
-        catch ( final PwmException e )
-        {
-            pwmRequest.outputJsonResult( RestResultBean.fromError( e.getErrorInformation() ) );
-            return ProcessStatus.Halt;
-        }
-
-        final Map<String, String> jsonBodyMap = pwmRequest.readBodyAsJsonStringMap();
-
-        // Get encrypted dn (edn)
-        final String edn = jsonBodyMap.get( "edn" );
-        if ( edn == null )
-        {
-            pwmRequest.outputJsonResult( RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_MISSING_PARAMETER, "edn is required" ) ) );
-            return ProcessStatus.Halt;
-        }
-
-        final DomainSecureService domainSecureService = pwmRequest.getPwmDomain().getSecureService();
-        final String userDn = domainSecureService.decryptStringValue( edn );
-        pwmRequest.setAttribute( PwmRequestAttribute.NewUser_CreatedUserDn, userDn );
-        pwmRequest.setAttribute( PwmRequestAttribute.NewUser_ProfileId, getNewUserProfile( pwmRequest ).getIdentifier() );
-        pwmRequest.forwardToJsp( JspUrl.NEW_USER_DETERMINE_REDIRECT );
         return ProcessStatus.Halt;
     }
 

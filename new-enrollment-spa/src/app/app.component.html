@@ -1,8 +1,10 @@
-<mat-toolbar color="primary">
-  <mat-icon aria-hidden="true" style="padding-right: 5px; padding-bottom: 2px;">person_add</mat-icon>
-  <span>New User Enrollment</span>
-</mat-toolbar>
+<div style="position: relative">
+  <mat-toolbar color="primary">
+    <mat-icon aria-hidden="true" style="padding-right: 5px; padding-bottom: 2px;">person_add</mat-icon>
+    <span>New User Enrollment</span>
+  </mat-toolbar>
+  <mat-progress-bar *ngIf="loading$ | async" color="accent" mode="indeterminate" style="position: absolute; bottom: -4px"></mat-progress-bar>
+</div>
 <main style="padding-bottom: 72px;">
-  <mat-progress-bar *ngIf="loading$ | async" color="accent" mode="indeterminate"></mat-progress-bar>
   <app-new-user-form></app-new-user-form>
 </main>

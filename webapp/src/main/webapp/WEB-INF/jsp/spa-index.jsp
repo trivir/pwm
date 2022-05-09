@@ -50,7 +50,12 @@
     } catch (IOException e) {
         throw new ServletException("Unable to load the file.", e);
     }
-    file = file.replaceAll("\\$PROFILE_ID\\$", (String) JspUtility.getAttribute(pageContext, PwmRequestAttribute.NewUser_ProfileId));
+
+    file = file.replaceAll("<base href=\"/\">", String.format("<base href=\"%s\">", pageContext.getServletContext().getContextPath() + "/public/new-enrollment/" ));
+    file = file.replaceAll("window.baseUrl = '';", String.format("window.baseUrl = '%s';", pageContext.getServletContext().getContextPath() ));
+    file = file.replaceAll("window.newUserProfileId = '';", String.format("window.newUserProfileId = '%s';", JspUtility.getAttribute(pageContext, PwmRequestAttribute.NewUser_ProfileId)));
+    file = file.replaceAll("window.locale = '';", String.format("window.locale = '%s';", pwmRequest.getLocale()));
+
     file = file.replaceAll( "<script", "<script nonce=\"" + pwmRequest.getCspNonce() + "\"");
 
     pageContext.getOut().print(file);
