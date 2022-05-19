@@ -1,5 +1,53 @@
 <mat-card class="mat-elevation-z0" [class.is-large-screen]="isLargeScreen | async">
 
+    <!-- Initial Input -->
+    <form *ngIf="formState === 'initialInput'" (ngSubmit)="continueToInitialVerify()" [formGroup]="infoForm">
+        <mat-card-title>New User</mat-card-title>
+
+        <mat-card-content style="padding-top: 10px;">
+          <app-dynamic-form-field [form]="infoForm" [formConfig]="primaryEmailFormConfig!"></app-dynamic-form-field>
+        </mat-card-content>
+
+
+        <mat-card-actions align="end" style="margin: 0;">
+          <button mat-flat-button color="primary" type="submit">Send OTP</button>
+        </mat-card-actions>
+    </form>
+
+    <!-- Initial Verify -->
+    <form *ngIf="formState === 'initialVerify'" (ngSubmit)="continueToInput()" [formGroup]="verifyForm">
+      <mat-card-title>Verify Email</mat-card-title>
+
+      <mat-card-content style="padding-top: 10px;">
+        <app-dynamic-form-field [form]="infoForm" [formConfig]="primaryEmailFormConfig!"></app-dynamic-form-field>
+        <mat-form-field>
+          <mat-label>OTP Code</mat-label>
+          <input matInput [formControlName]="primaryEmailFormConfig!.name + 'Otp'">
+          <mat-error *ngIf="verifyForm.get(primaryEmailFormConfig!.name + 'Otp')?.hasError('incorrect')">Incorrect token</mat-error>
+        </mat-form-field>
+      </mat-card-content>
+
+      <mat-card-actions style="margin: 0; display: flex;">
+        <button type="button" mat-button (click)="returnToInitialInput()">Back</button>
+        <span style="flex: 1 1 auto"></span>
+        <button
+          type="button"
+          mat-button color="primary"
+          [disabled]="verifyForm.get(primaryEmailFormConfig!.name + 'OtpDisabled')!.value"
+          (click)="sendOtp(primaryEmailFormConfig!.name)"
+        >
+          <span
+            matTooltip="Please wait 10 seconds before requesting another code"
+            [matTooltipDisabled]="!verifyForm.get(primaryEmailFormConfig!.name + 'OtpDisabled')!.value"
+            matTooltipPosition="above"
+          >
+            {{ verifyForm.get(primaryEmailFormConfig!.name + 'OtpSent')?.value ? 'Resend' : 'Send OTP' }}
+          </span>
+        </button>
+        <button type="submit" mat-flat-button color="primary">Verify OTP</button>
+      </mat-card-actions>
+    </form>
+
     <!-- User Input -->
     <form *ngIf="formState === 'input'" (ngSubmit)="coninueToVerify()" [formGroup]="infoForm">
       <mat-card-title>New User</mat-card-title>
@@ -7,7 +55,7 @@
       <mat-card-content style="padding-top: 10px;">
         <!-- Normal fields -->
         <ng-container *ngFor="let formConfig of formConfigs">
-          <app-dynamic-form-field [form]="infoForm" [formConfig]="formConfig"></app-dynamic-form-field>
+          <app-dynamic-form-field [isPrimaryEmail]="formConfig.name === this.primaryEmailFormConfig?.name" [form]="infoForm" [formConfig]="formConfig"></app-dynamic-form-field>
           <app-dynamic-form-field *ngIf="formConfig.confirmationRequired" [form]="infoForm" [formConfig]="generateConfirmFormConfig(formConfig)"></app-dynamic-form-field>
         </ng-container>
 
@@ -19,7 +67,7 @@
           </ul>
           <mat-form-field>
             <mat-label>Password</mat-label>
-            <input matInput type="password" formControlName="password1" autocomplete="new-password">
+            <input matInput type="password" formControlName="password1" autocomplete="new-password" (keydown.enter)="$event.preventDefault()">
             <mat-error *ngIf="infoForm.get('password1')!.hasError('required')">Password is required</mat-error>
             <mat-error *ngIf="infoForm.get('password1')!.hasError('passwordRules')">{{ infoForm.get('password1')!.errors?.['passwordRules'] }}</mat-error>
           </mat-form-field>
@@ -49,8 +97,10 @@
         </ng-container>
       </mat-card-content>
 
-      <mat-card-actions align="end" style="margin: 0;">
-        <button *ngIf="this.formConfigs.length > 0" mat-flat-button color="primary" type="submit">Continue</button>
+      <mat-card-actions *ngIf="this.formConfigs.length > 0" style="margin: 0; display: flex;">
+        <button *ngIf="this.isVerifyFirst" type="button" mat-button (click)="returnToInitialInput()">Back</button>
+        <span style="flex: 1 1 auto"></span>
+        <button mat-flat-button color="primary" type="submit">{{ isVerifyFirst ? 'Submit' : 'Continue' }}</button>
       </mat-card-actions>
     </form>
 
@@ -63,7 +113,10 @@
         <ng-container *ngFor="let field of needVerificationFields">
 
           <div style="width: 100%; display: flex; align-items: center;">
-            <h3 style="margin-bottom: 0;">{{ verifyForm.get(field + 'Val')!.value }}{{ verifyForm.get(field + 'OtpVerified')!.value ? ' ✓' : '' }}</h3>
+            <h3 style="margin-bottom: 0; display: flex; align-items: center;">
+              {{ verifyForm.get(field + 'Val')!.value }}
+              <mat-icon *ngIf="verifyForm.get(field + 'OtpVerified')!.value" style="display: flex; font-size: larger; align-items: center; justify-content: center;" color="primary">verified</mat-icon>
+            </h3>
             <ng-container *ngIf="!verifyForm.get(field + 'OtpVerified')!.value">
               <span style="flex: 1 1 auto"></span>
               <button

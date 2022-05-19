@@ -1,6 +1,6 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Component, OnInit } from '@angular/core';
-import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormGroup, Validators } from '@angular/forms';
 import { map, Observable, timer } from 'rxjs';
 import { DynamicFormService } from '../dynamic-form.service';
 import { MatchingValidator } from '../matching.validator';
@@ -11,6 +11,8 @@ import { NewUserService } from './new-user.service';
 import { PasswordRulesValidator } from './password-rules.validator';
 
 type FormState =
+  | 'initialInput'
+  | 'initialVerify'
   | 'input'
   | 'verify'
 
@@ -23,6 +25,10 @@ export class NewUserComponent implements OnInit {
 
   formState: FormState = 'input';
   isLargeScreen: Observable<boolean>;
+
+  isVerifyFirst = false;
+  primaryEmailFormConfig: FormConfig | null = null;
+  primaryEmailFormControl: AbstractControl | null = null;
 
   // User info form
   infoForm: FormGroup = new FormGroup({});
@@ -71,7 +77,6 @@ export class NewUserComponent implements OnInit {
 
     this.service.getNewUserFormSchema().subscribe({
       next: x => {
-        // Normal fields
         this.infoForm = this.formService.toFormGroup(x.fieldConfigs);
         this.formConfigs = x.fieldConfigs;
         Object.keys(this.infoForm.controls)
@@ -118,6 +123,15 @@ export class NewUserComponent implements OnInit {
           const decodedCookieValue = atob(encodedCookieValue || '');
           this.infoForm.get('nokiaPersonReferralURL')!.setValue(decodedCookieValue);
         }
+
+        if (Object.entries(x.fieldsForVerification).length === 1 && Object.values(x.fieldsForVerification).every(it => it === 'email')) {
+          this.isVerifyFirst = true
+          this.formState = 'initialInput'
+          const primaryEmailFormConfigName = Object.keys(x.fieldsForVerification)[0]
+          const indexOfPrimaryEmailConfig = this.formConfigs.findIndex(it => it.name === primaryEmailFormConfigName)
+          this.primaryEmailFormConfig = this.formConfigs[indexOfPrimaryEmailConfig];
+          this.primaryEmailFormControl = this.infoForm.get(primaryEmailFormConfigName);
+        }
       },
       error: e => this.notifications.push(e.messsage)
     })
@@ -133,19 +147,12 @@ export class NewUserComponent implements OnInit {
     this.infoForm.get('privacyPolicyAgreed')?.enable();
   }
 
-  coninueToVerify(): void {
-    if (this.infoForm.invalid) {
-      Object.values(this.infoForm.controls).forEach(control => {
-        control.markAsDirty()
-      })
+  returnToInitialInput(): void {
+    this.primaryEmailFormConfig!.readonly = false;
+    this.formState = 'initialInput'
+  }
 
-      return;
-    }
-
-    this.needVerificationFields = Object.keys(this.fieldsToVerify)
-      .filter(field => this.infoForm.get(field)?.value !== '');
-
-    for (const field of this.needVerificationFields) {
+  private initializeVerifyFormField(field: string): void {
       // If not in verify form, add it
       if (!this.verifyForm.contains(`${field}Val`)) {
         this.verifyForm.addControl(`${field}Val`, new FormControl(this.infoForm.get(field)!.value));
@@ -154,7 +161,7 @@ export class NewUserComponent implements OnInit {
         this.verifyForm.addControl(`${field}OtpDisabled`, new FormControl(false))
         this.verifyForm.addControl(`${field}OtpVerified`, new FormControl(false, Validators.requiredTrue))
         this.verifyForm.addControl(`${field}Token`, new FormControl('', Validators.required))
-        continue;
+        return;
       }
 
       // If the value has changed, reset the values
@@ -166,6 +173,46 @@ export class NewUserComponent implements OnInit {
         this.verifyForm.get(`${field}OtpVerified`)!.reset(false);
         this.verifyForm.get(`${field}Token`)!.reset('');
       }
+  }
+
+  continueToInitialVerify(): void {
+    this.primaryEmailFormControl!.markAsDirty()
+    if (this.primaryEmailFormControl!.invalid) {
+      return
+    }
+    this.initializeVerifyFormField(this.primaryEmailFormConfig!.name);
+    this.primaryEmailFormConfig!.readonly = true;
+    if (!this.verifyForm.get(this.primaryEmailFormConfig!.name + "OtpVerified")!.valid) {
+      this.sendOtp(this.primaryEmailFormConfig!.name)
+      this.formState = 'initialVerify'
+    } else {
+      this.formState = 'input'
+    }
+  }
+
+  continueToInput(): void {
+    this.verifyOtp(this.primaryEmailFormConfig!.name);
+  }
+
+  coninueToVerify(): void {
+    Object.values(this.infoForm.controls).forEach(control => {
+      control.markAsDirty()
+    })
+
+    if (this.infoForm.invalid) {
+      return;
+    }
+
+    if (this.isVerifyFirst) {
+      this.onSubmit()
+      return
+    }
+
+    this.needVerificationFields = Object.keys(this.fieldsToVerify)
+      .filter(field => this.infoForm.get(field)?.value !== '');
+
+    for (const field of this.needVerificationFields) {
+      this.initializeVerifyFormField(field)
     }
 
     this.formState = 'verify';
@@ -219,6 +266,9 @@ export class NewUserComponent implements OnInit {
         }
         this.verifyForm.get(`${field}Token`)!.setValue(x.token)
         this.verifyForm.get(`${field}OtpVerified`)!.setValue(true)
+        if (this.isVerifyFirst) {
+          this.formState = 'input';
+        }
       },
       error: e => this.notifications.push(e.message)
     })

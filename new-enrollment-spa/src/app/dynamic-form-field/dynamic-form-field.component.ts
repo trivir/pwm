@@ -12,6 +12,7 @@ export class DynamicFormFieldComponent {
 
   @Input() formConfig!: FormConfig;
   @Input() form!: FormGroup;
+  @Input() isPrimaryEmail: boolean = false;
 
   constructor(private localePipe: LocalePipe) { }
 

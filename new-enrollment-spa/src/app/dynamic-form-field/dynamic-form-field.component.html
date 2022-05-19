@@ -18,6 +18,7 @@
   <mat-form-field *ngSwitchDefault [formGroup]="form" appearance="outline" style="width: 100%">
     <mat-label>{{ formConfig.labels | locale }}</mat-label>
     <input *ngSwitchDefault matInput [type]="formConfig.type" [formControlName]="formConfig.name" [placeholder]="formConfig.placeholder" [readonly]="formConfig.readonly">
+    <mat-icon *ngIf="isPrimaryEmail" matSuffix color="primary">verified</mat-icon>
     <mat-hint *ngIf="formConfig.name.endsWith('_confirm')">{{ formConfig.description | locale }}</mat-hint>
     <mat-error *ngIf="!isValid">{{ errorMessage }}</mat-error>
   </mat-form-field>

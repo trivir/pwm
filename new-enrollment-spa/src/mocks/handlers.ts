@@ -27,6 +27,23 @@ export const handlers = [
 
     return res();
   }),
+
+  rest.post('/public/command', (req, res, ctx) => {
+    const processAction = req.url.searchParams.get('processAction');
+    if (processAction) {
+      const response: PwmRestResult<string> = {
+        error: false,
+        errorCode: 0,
+        data: 'https://google.com'
+      };
+      return res(
+        ctx.delay(),
+        ctx.json(response)
+      );
+    }
+
+    return res();
+  })
 ];
 
 const postResponses: { [action: string]: PwmRestResult<any> } = {
@@ -44,6 +61,10 @@ const postResponses: { [action: string]: PwmRestResult<any> } = {
     error: false,
     errorCode: 0
   },
+  // 'verifyOTP': {
+  //   error: true,
+  //   errorCode: 5037 // Incorrect token
+  // },
   'checkUnique': {
     data: true,
     error: false,
@@ -61,11 +82,6 @@ const postResponses: { [action: string]: PwmRestResult<any> } = {
     error: false,
     errorCode: 0,
     data: {}
-  },
-  'determineRedirect': {
-    error: false,
-    errorCode: 0,
-    data: 'https://google.com'
   },
   'default': {
     error: true,
