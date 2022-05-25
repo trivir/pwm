@@ -158,9 +158,10 @@ export class NewUserComponent implements OnInit {
         this.verifyForm.addControl(`${field}Val`, new FormControl(this.infoForm.get(field)!.value));
         this.verifyForm.addControl(`${field}OtpSent`, new FormControl(false))
         this.verifyForm.addControl(`${field}Otp`, new FormControl(''))
-        this.verifyForm.addControl(`${field}OtpDisabled`, new FormControl(false))
+        this.verifyForm.addControl(`${field}OtpDisabled`, new FormControl(''))
         this.verifyForm.addControl(`${field}OtpVerified`, new FormControl(false, Validators.requiredTrue))
         this.verifyForm.addControl(`${field}Token`, new FormControl('', Validators.required))
+        this.verifyForm.addControl(`${field}NumSent`, new FormControl(0))
         return;
       }
 
@@ -169,9 +170,10 @@ export class NewUserComponent implements OnInit {
         this.verifyForm.get(`${field}Val`)!.setValue(this.infoForm.get(field)!.value);
         this.verifyForm.get(`${field}OtpSent`)!.reset(false);
         this.verifyForm.get(`${field}Otp`)!.reset('');
-        this.verifyForm.get(`${field}OtpDisabled`)!.reset(false);
+        this.verifyForm.get(`${field}OtpDisabled`)!.reset('');
         this.verifyForm.get(`${field}OtpVerified`)!.reset(false);
         this.verifyForm.get(`${field}Token`)!.reset('');
+        this.verifyForm.get(`${field}NumSent`)!.reset(0);
       }
   }
 
@@ -218,6 +220,14 @@ export class NewUserComponent implements OnInit {
     this.formState = 'verify';
   }
 
+  determineOtpDisableReason(otpDisabledFieldValue: string): string {
+    return otpDisabledFieldValue === 'limit'
+      ? 'You have reached the maximum number of OTP codes you can request'
+      : otpDisabledFieldValue === 'timeout'
+      ? `Please wait ${window.resendTimeout || 10} seconds before requesting another code`
+      : ''
+  }
+
   sendOtp(field: string): void {
     field = field.trim();
 
@@ -230,8 +240,14 @@ export class NewUserComponent implements OnInit {
 
     const fieldVal = this.verifyForm.get(`${field}Val`)?.value.trim();
 
-    this.verifyForm.get(`${field}OtpDisabled`)!.setValue(true);
-    timer(10_000).subscribe(_ => this.verifyForm.get(`${field}OtpDisabled`)!.setValue(false))
+    const numOtpSent = this.verifyForm.get(`${field}NumSent`)!.value + 1
+    this.verifyForm.get(`${field}NumSent`)!.setValue(numOtpSent);
+    if (numOtpSent >= (window.maxOtpSends || 5)) {
+      this.verifyForm.get(`${field}OtpDisabled`)!.setValue('limit');
+    } else {
+      this.verifyForm.get(`${field}OtpDisabled`)!.setValue('timeout');
+      timer((window.resendTimeout || 10) * 1000).subscribe(_ => this.verifyForm.get(`${field}OtpDisabled`)!.setValue(''))
+    }
 
     switch (method) {
       case 'email':
@@ -262,6 +278,9 @@ export class NewUserComponent implements OnInit {
       next: x => {
         if (x.token === '') {
           this.verifyForm.get(`${field}Otp`)?.setErrors({ incorrect: true })
+          return;
+        } else if (x.token === 'expired') {
+          this.verifyForm.get(`${field}Otp`)?.setErrors({ expired: true })
           return;
         }
         this.verifyForm.get(`${field}Token`)!.setValue(x.token)

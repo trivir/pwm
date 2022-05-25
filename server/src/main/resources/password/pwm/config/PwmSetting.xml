@@ -2855,6 +2855,20 @@
             <value>true</value>
         </default>
     </setting>
+    <setting hidden="false" key="newUser.email.maxOtpRequests" level="1">
+        <default>
+            <value>5</value>
+        </default>
+        <properties>
+            <property key="Minimum">1</property>
+            <property key="Maximum">100</property>
+        </properties>
+    </setting>
+    <setting hidden="false" key="newUser.email.otpRequestTimeout" level="1">
+        <default>
+            <value>10</value>
+        </default>
+    </setting>
     <setting hidden="false" key="newUser.sms.verification" level="1">
         <default>
             <value>false</value>

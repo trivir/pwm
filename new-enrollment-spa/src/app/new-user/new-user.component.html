@@ -24,6 +24,7 @@
           <mat-label>OTP Code</mat-label>
           <input matInput [formControlName]="primaryEmailFormConfig!.name + 'Otp'">
           <mat-error *ngIf="verifyForm.get(primaryEmailFormConfig!.name + 'Otp')?.hasError('incorrect')">Incorrect token</mat-error>
+          <mat-error *ngIf="verifyForm.get(primaryEmailFormConfig!.name + 'Otp')?.hasError('expired')">Token expired, please resend a new one</mat-error>
         </mat-form-field>
       </mat-card-content>
 
@@ -33,12 +34,12 @@
         <button
           type="button"
           mat-button color="primary"
-          [disabled]="verifyForm.get(primaryEmailFormConfig!.name + 'OtpDisabled')!.value"
+          [disabled]="verifyForm.get(primaryEmailFormConfig!.name + 'OtpDisabled')!.value !== ''"
           (click)="sendOtp(primaryEmailFormConfig!.name)"
         >
           <span
-            matTooltip="Please wait 10 seconds before requesting another code"
-            [matTooltipDisabled]="!verifyForm.get(primaryEmailFormConfig!.name + 'OtpDisabled')!.value"
+            [matTooltip]="determineOtpDisableReason(verifyForm.get(primaryEmailFormConfig!.name + 'OtpDisabled')!.value)"
+            [matTooltipDisabled]="verifyForm.get(primaryEmailFormConfig!.name + 'OtpDisabled')!.value === ''"
             matTooltipPosition="above"
           >
             {{ verifyForm.get(primaryEmailFormConfig!.name + 'OtpSent')?.value ? 'Resend' : 'Send OTP' }}
@@ -100,7 +101,7 @@
       <mat-card-actions *ngIf="this.formConfigs.length > 0" style="margin: 0; display: flex;">
         <button *ngIf="this.isVerifyFirst" type="button" mat-button (click)="returnToInitialInput()">Back</button>
         <span style="flex: 1 1 auto"></span>
-        <button mat-flat-button color="primary" type="submit">{{ isVerifyFirst ? 'Submit' : 'Continue' }}</button>
+        <button mat-flat-button [disabled]="isSubmitting" color="primary" type="submit">{{ isVerifyFirst ? 'Submit' : 'Continue' }}</button>
       </mat-card-actions>
     </form>
 
@@ -122,12 +123,12 @@
               <button
                 type="button"
                 mat-button color="primary"
-                [disabled]="verifyForm.get(field + 'OtpDisabled')!.value"
+                [disabled]="verifyForm.get(field + 'OtpDisabled')!.value !== ''"
                 (click)="sendOtp(field)"
               >
                 <span
-                  matTooltip="Please wait 10 seconds before requesting another code"
-                  [matTooltipDisabled]="!verifyForm.get(field + 'OtpDisabled')!.value"
+                  [matTooltip]="determineOtpDisableReason(verifyForm.get(field + 'OtpDisabled')!.value)"
+                  [matTooltipDisabled]="verifyForm.get(field + 'OtpDisabled')!.value === ''"
                   matTooltipPosition="above"
                 >
                   {{ verifyForm.get(field + 'OtpSent')?.value ? 'Resend' : 'Send OTP' }}
@@ -141,6 +142,7 @@
             <mat-label>OTP Code</mat-label>
             <input matInput [formControlName]="field + 'Otp'" (keydown.enter)="$event.preventDefault(); verifyOtp(field)">
             <mat-error *ngIf="verifyForm.get(field + 'Otp')?.hasError('incorrect')">Incorrect token</mat-error>
+            <mat-error *ngIf="verifyForm.get(field + 'Otp')?.hasError('expired')">Token expired, please resend a new one</mat-error>
           </mat-form-field>
 
         </ng-container>

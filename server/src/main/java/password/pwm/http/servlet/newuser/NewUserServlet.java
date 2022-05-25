@@ -83,6 +83,7 @@ import javax.servlet.annotation.WebServlet;
 import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -419,6 +420,9 @@ public class NewUserServlet extends ControlledPwmServlet
 
         @SerializedName( "otp" )
         private String otp;
+
+        @SerializedName( "timestamp" )
+        private String timestamp;
     }
 
     @ActionHandler( action = "sendOTP" )
@@ -437,6 +441,7 @@ public class NewUserServlet extends ControlledPwmServlet
         final NewUserTokenData2 tokenData = new NewUserTokenData2();
         tokenData.emailAddress = email;
         tokenData.otp = String.valueOf( ThreadLocalRandom.current().nextInt( 100000, 1000000 ) );
+        tokenData.timestamp = Instant.now().toString();
 
         final DomainSecureService domainSecureService = pwmRequest.getPwmDomain().getSecureService();
         final String encodedTokenData = domainSecureService.encryptObjectToString( tokenData );
@@ -465,6 +470,16 @@ public class NewUserServlet extends ControlledPwmServlet
     @ActionHandler( action = "verifyOTP" )
     public ProcessStatus restVerifyOTP( final PwmRequest pwmRequest ) throws IOException, PwmUnrecoverableException
     {
+        try
+        {
+            setProfileIdOnPwmRequest( pwmRequest );
+        }
+        catch ( final PwmException e )
+        {
+            pwmRequest.outputJsonResult( RestResultBean.fromError( e.getErrorInformation() ) );
+            return ProcessStatus.Halt;
+        }
+
         final Map<String, String> jsonBodyMap = pwmRequest.readBodyAsJsonStringMap();
 
         final String token = jsonBodyMap.get( "token" );
@@ -483,6 +498,18 @@ public class NewUserServlet extends ControlledPwmServlet
         if ( !data.otp.equals( otp ) )
         {
             final RestResultBean restResultBean = RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_TOKEN_INCORRECT ), pwmRequest );
+            pwmRequest.outputJsonResult( restResultBean );
+            return ProcessStatus.Halt;
+        }
+
+        final Duration timeSinceTokenCreated = Duration.between( Instant.parse( data.timestamp ), Instant.now() );
+        final NewUserProfile newUserProfile = getNewUserProfile( pwmRequest );
+        final long tokenLifeTime = newUserProfile.readSettingAsLong( PwmSetting.NEWUSER_TOKEN_LIFETIME_EMAIL ) > 0
+                ? newUserProfile.readSettingAsLong( PwmSetting.NEWUSER_TOKEN_LIFETIME_EMAIL )
+                : pwmRequest.getDomainConfig().readSettingAsLong( PwmSetting.TOKEN_LIFETIME );
+        if ( timeSinceTokenCreated.getSeconds() > tokenLifeTime )
+        {
+            final RestResultBean restResultBean = RestResultBean.fromError( new ErrorInformation( PwmError.ERROR_TOKEN_EXPIRED ), pwmRequest );
             pwmRequest.outputJsonResult( restResultBean );
             return ProcessStatus.Halt;
         }
@@ -1286,6 +1313,8 @@ public class NewUserServlet extends ControlledPwmServlet
         if ( useSinglePageForm )
         {
             pwmRequest.setAttribute( PwmRequestAttribute.NewUser_ProfileId, newUserProfile.getIdentifier() );
+            pwmRequest.setAttribute( PwmRequestAttribute.NewUser_MaxOtpRequests, newUserProfile.readSettingAsLong( PwmSetting.NEWUSER_EMAIL_MAX_OTP_REQUESTS ) );
+            pwmRequest.setAttribute( PwmRequestAttribute.NewUser_OtpRequestTimeout, newUserProfile.readSettingAsLong( PwmSetting.NEWUSER_EMAIL_OTP_REQUEST_TIMEOUT ) );
             pwmRequest.forwardToJsp( JspUrl.NEW_USER_SPA );
         }
         else

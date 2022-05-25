@@ -65,6 +65,11 @@ const postResponses: { [action: string]: PwmRestResult<any> } = {
   //   error: true,
   //   errorCode: 5037 // Incorrect token
   // },
+  // 'verifyOTP': {
+  //   error: true,
+  //   errorCode: 5041,
+  //   errorMessage: "The token you have entered is expired and is no longer valid.  Please try again."
+  // },
   'checkUnique': {
     data: true,
     error: false,

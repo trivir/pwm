@@ -55,6 +55,8 @@
     file = file.replaceAll("window.baseUrl = '';", String.format("window.baseUrl = '%s';", pageContext.getServletContext().getContextPath() ));
     file = file.replaceAll("window.newUserProfileId = '';", String.format("window.newUserProfileId = '%s';", JspUtility.getAttribute(pageContext, PwmRequestAttribute.NewUser_ProfileId)));
     file = file.replaceAll("window.locale = '';", String.format("window.locale = '%s';", pwmRequest.getLocale()));
+    file = file.replaceAll("window.maxOtpSends = 5;", String.format("window.maxOtpSends = %s;", JspUtility.getAttribute(pageContext, PwmRequestAttribute.NewUser_MaxOtpRequests)));
+    file = file.replaceAll("window.resendTimeout = 10;", String.format("window.resendTimeout = %s;", JspUtility.getAttribute(pageContext, PwmRequestAttribute.NewUser_OtpRequestTimeout)));
 
     file = file.replaceAll( "<script", "<script nonce=\"" + pwmRequest.getCspNonce() + "\"");
 

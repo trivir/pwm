@@ -49,13 +49,17 @@ export class NewUserService {
     token = token.trim();
 
     const url = `${window.baseUrl}/public/newuser`;
-    const params = new HttpParams().set('processAction', 'verifyOTP');
+    const params = new HttpParams().set('processAction', 'verifyOTP')
+      .set('newUserProfileId', window.newUserProfileId);
     const payload = { otp, token };
 
     return this.http.post<PwmRestResult<{ token: string }>>(url, payload, { params }).pipe(
       tap(x => {
         if (x.error && x.errorCode === 5037) {
           x.data = { token: '' };
+          return x
+        } else if (x.error && x.errorCode === 5041) {
+          x.data = { token: 'expired'};
           return x
         }
         return this.checkError(x)

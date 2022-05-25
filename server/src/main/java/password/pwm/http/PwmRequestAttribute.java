@@ -95,6 +95,8 @@ public enum PwmRequestAttribute
     NewUser_VisibleProfiles,
     NewUser_ProfileId,
     NewUser_CreatedUserDn,
+    NewUser_MaxOtpRequests,
+    NewUser_OtpRequestTimeout,
 
     CookieBeanStorage,
     CookieNonce,

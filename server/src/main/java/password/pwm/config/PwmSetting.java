@@ -883,6 +883,10 @@ public enum PwmSetting
             "newUser.username.definition", PwmSettingSyntax.STRING_ARRAY, PwmSettingCategory.NEWUSER_PROFILE ),
     NEWUSER_EMAIL_VERIFICATION(
             "newUser.email.verification", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.NEWUSER_PROFILE ),
+    NEWUSER_EMAIL_MAX_OTP_REQUESTS(
+            "newUser.email.maxOtpRequests", PwmSettingSyntax.NUMERIC, PwmSettingCategory.NEWUSER_PROFILE ),
+    NEWUSER_EMAIL_OTP_REQUEST_TIMEOUT(
+            "newUser.email.otpRequestTimeout", PwmSettingSyntax.DURATION, PwmSettingCategory.NEWUSER_PROFILE ),
     NEWUSER_SMS_VERIFICATION(
             "newUser.sms.verification", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.NEWUSER_PROFILE ),
     NEWUSER_EXTERNAL_VERIFICATION(
