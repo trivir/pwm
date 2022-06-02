@@ -101,7 +101,7 @@
       <mat-card-actions *ngIf="this.formConfigs.length > 0" style="margin: 0; display: flex;">
         <button *ngIf="this.isVerifyFirst" type="button" mat-button (click)="returnToInitialInput()">Back</button>
         <span style="flex: 1 1 auto"></span>
-        <button mat-flat-button [disabled]="isSubmitting" color="primary" type="submit">{{ isVerifyFirst ? 'Submit' : 'Continue' }}</button>
+        <button mat-flat-button color="primary" type="submit">{{ isVerifyFirst ? 'Submit' : 'Continue' }}</button>
       </mat-card-actions>
     </form>
 
@@ -151,7 +151,12 @@
       <mat-card-actions style="margin: 0; display: flex;">
         <button type="button" mat-button (click)="formState = 'input'">Back</button>
         <span style="flex: 1 1 auto"></span>
-        <button type="submit" mat-flat-button color="primary" [disabled]="verifyForm.invalid || isSubmitting">Submit</button>
+        <button type="submit" mat-flat-button color="primary" [disabled]="verifyForm.invalid">Submit</button>
       </mat-card-actions>
     </form>
+
+    <ng-container *ngIf="formState === 'submitting'">
+      <mat-card-title>Your account is being created</mat-card-title>
+      <mat-card-content style="margin-top: 1.5rem">This may take a minute, please wait...</mat-card-content>
+    </ng-container>
 </mat-card>

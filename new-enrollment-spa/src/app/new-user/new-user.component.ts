@@ -15,6 +15,7 @@ type FormState =
   | 'initialVerify'
   | 'input'
   | 'verify'
+  | 'submitting'
 
 @Component({
   selector: 'app-new-user-form',
@@ -43,7 +44,6 @@ export class NewUserComponent implements OnInit {
   needVerificationFields: string[] = [];
   fieldsToVerify: Record<string, VerificationMethod> = {};
 
-  isSubmitting = false;
   redirectUrl = '';
   isDynamicRedirect = false;
 
@@ -301,7 +301,7 @@ export class NewUserComponent implements OnInit {
       }
     }
 
-    this.isSubmitting = true;
+    this.formState = 'submitting';
     this.service.createUser(userData).subscribe({
       next: x => {
         if (this.isDynamicRedirect) {

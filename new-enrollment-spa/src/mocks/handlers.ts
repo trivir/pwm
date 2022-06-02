@@ -37,7 +37,7 @@ export const handlers = [
         data: 'https://google.com'
       };
       return res(
-        ctx.delay(),
+        ctx.delay(10_000),
         ctx.json(response)
       );
     }
@@ -179,7 +179,9 @@ const getResponses: { [action: string]: PwmRestResult<any> } = {
         'Must not include part of your name or user name.'
       ],
       redirectUrl: 'https://google.com',
+      // userAgreement: '',
       userAgreement: 'about:blank',
+      // userPrivacyAgreement: '',
       userPrivacyAgreement: 'about:blank',
       fieldsForVerification: {
         'mail': 'email'
